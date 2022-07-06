@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { jid as parseJid } from '@xmpp/client';
 import { BehaviorSubject, combineLatest, merge, Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import { ChatActionContext } from '../../../components/chat-window/chat-window.component';
 import { Contact } from '../../../core/contact';
 import { dummyAvatarContact } from '../../../core/contact-avatar';
 import { LogInRequest } from '../../../core/log-in-request';
@@ -19,6 +18,7 @@ import { MessagePlugin } from './plugins/message.plugin';
 import { MultiUserChatPlugin } from './plugins/multi-user-chat.plugin';
 import { RosterPlugin } from './plugins/roster.plugin';
 import { XmppChatConnectionService, XmppChatStates } from './xmpp-chat-connection.service';
+import { type ChatActionContext } from '../../../chat-action.context';
 
 @Injectable()
 export class XmppChatAdapter implements ChatService {

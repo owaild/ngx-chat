@@ -84,7 +84,7 @@ class RetrieveDataStanzaBuilder extends AbstractStanzaBuilder {
  */
 export class PublishSubscribePlugin extends AbstractXmppPlugin {
 
-    readonly publish$ = new Subject<Stanza>();
+    readonly publish$ = new Subject<Element>();
     private readonly supportsPrivatePublish = new BehaviorSubject<boolean | 'unknown'>('unknown');
 
     constructor(private readonly xmppChatAdapter: XmppChatAdapter,

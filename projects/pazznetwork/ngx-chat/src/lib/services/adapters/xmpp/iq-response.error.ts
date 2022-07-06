@@ -1,4 +1,5 @@
 import { IqResponseStanza } from '../../../core/stanza';
+import {Element, Node} from 'ltx';
 
 export class IqResponseError extends Error {
     static readonly ERROR_ELEMENT_NS = 'urn:ietf:params:xml:ns:xmpp-stanzas';
@@ -29,13 +30,13 @@ export class IqResponseError extends Error {
         const errorCode = Number(errorElement?.attrs.code) || undefined;
         const errorType = errorElement?.attrs.type as string | undefined;
         const errorCondition =
-            errorElement
+            (errorElement
                 ?.children
-                .filter(childElement =>
-                    childElement.getName() !== 'text' &&
-                    childElement.attrs.xmlns === IqResponseError.ERROR_ELEMENT_NS
-                )[0]
-                ?.getName();
+                .filter((childElement: Node) =>
+                    (childElement as Element).getName() !== 'text' &&
+                    (childElement as Element).attrs.xmlns === IqResponseError.ERROR_ELEMENT_NS
+                )[0] as Element
+                )?.getName();
 
         return {
             code: errorCode,

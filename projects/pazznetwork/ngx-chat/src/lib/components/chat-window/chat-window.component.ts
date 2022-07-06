@@ -9,6 +9,7 @@ import { ChatListStateService, ChatWindowState } from '../../services/chat-list-
 import { ChatService, ChatServiceToken } from '../../services/chat-service';
 import { ChatMessageInputComponent } from '../chat-message-input/chat-message-input.component';
 import { ChatMessageListComponent } from '../chat-message-list/chat-message-list.component';
+import { ChatAction} from '../../chat-action';
 
 @Component({
     selector: 'ngx-chat-window',
@@ -95,18 +96,4 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     }
 }
 
-export interface ChatAction {
-    cssClass: { [className: string]: boolean } | string | string[];
-    /**
-     * to identify actions
-     */
-    id: string;
-    html: string;
 
-    onClick(chatActionContext: ChatActionContext): void;
-}
-
-export interface ChatActionContext {
-    contact: string;
-    chatWindow: ChatWindowComponent;
-}

@@ -48,7 +48,7 @@ export class MessageCarbonsPlugin extends AbstractXmppPlugin {
         };
 
         const messageReceivedEvent = new MessageReceivedEvent();
-        this.xmppChatAdapter.plugins.forEach(plugin => plugin.afterReceiveMessage(message, messageElement, messageReceivedEvent));
+        this.xmppChatAdapter.plugins.forEach(plugin => plugin.afterReceiveMessage(message, messageElement as Stanza, messageReceivedEvent));
         if (!messageReceivedEvent.discard) {
             const {from, to} = messageElement.attrs;
             const contactJid = direction === Direction.in ? from : to;

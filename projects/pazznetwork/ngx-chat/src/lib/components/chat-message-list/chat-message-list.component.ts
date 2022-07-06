@@ -26,7 +26,7 @@ import { ChatMessageListRegistryService } from '../../services/chat-message-list
 import { ChatService, ChatServiceToken } from '../../services/chat-service';
 import { ContactFactoryService } from '../../services/contact-factory.service';
 import { REPORT_USER_INJECTION_TOKEN, ReportUserService } from '../../services/report-user-service';
-import { ChatMessageComponent } from '../chat-message/chat-message.component';
+import {ChatMessageComponent} from '../chat-message/chat-message.component';
 
 enum SubscriptionAction {
     PENDING_REQUEST,
