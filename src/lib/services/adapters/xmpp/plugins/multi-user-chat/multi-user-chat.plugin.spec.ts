@@ -44,6 +44,10 @@ const ghostLogin: LogInRequest = {
     password: 'ghost'
 };
 
+const romeoJID = jid(romeoLogin.username + '@' + romeoLogin.domain);
+const juliaJID = jid(romeoLogin.username + '@' + romeoLogin.domain);
+const ghostJID = jid(romeoLogin.username + '@' + romeoLogin.domain);
+
 function roomIdToJid(id: string): JID {
     return jid(id + '@' + 'conference.' + romeoLogin.domain);
 }
@@ -108,7 +112,7 @@ fdescribe('multi user chat plugin', () => {
         await client.register(ghostLogin);
     }, 15000);
 
-    fdescribe('room creation', () => {
+    describe('room creation', () => {
         it('should throw if user tries to create the same room multiple times', async () => {
             await chatService.logIn(romeoLogin);
             await chatService.createRoom(romeosRoom);
@@ -229,7 +233,7 @@ fdescribe('multi user chat plugin', () => {
         });
     });
 
-    fdescribe('room joining', () => {
+    describe('room joining', () => {
 
         const createRoomsAsGhost = async () => {
             await chatService.logIn(ghostLogin);
@@ -312,9 +316,7 @@ fdescribe('multi user chat plugin', () => {
             const queriedRooms = await chatService.queryAllRooms();
             const gotRooms = await chatService.getRooms();
             const subscriptions = await chatService.plugins.pubSub.getSubscriptions();
-            console.log('QUERIED ROOMS', queriedRooms);
-            console.log('GOT ROOMS', gotRooms);
-            console.log('GOT Subscriptions', subscriptions);
+
             expect(queriedRooms.length).toEqual(4);
             expect(gotRooms.length).toEqual(4);
             expect(subscriptions.length).toEqual(4);
@@ -342,22 +344,35 @@ fdescribe('multi user chat plugin', () => {
         });
     });
 
-    describe('room messaging', () => {
+    fdescribe('room messaging', () => {
 
-        it('should be able to receive messages', async () => {
+        fit('should be able to receive messages', async () => {
+            const roomJid = parseJid('chatroom', 'conference.example.com');
+            const message = 'message content here';
+
             await chatService.logIn(romeoLogin);
 
-            const roomsBeforeJoin = await chatService.rooms$.pipe(first()).toPromise();
+            const roomsBeforeJoin = await firstValueFrom(chatService.rooms$);
             const expectedRoomCount = roomsBeforeJoin.length++;
-            await chatService.joinRoom(parseJid('chatroom', 'conference.example.com'));
-            const roomsAfterJoin = await chatService.rooms$.pipe(first()).toPromise();
+            await chatService.joinRoom(roomJid);
+            const roomsAfterJoin = await firstValueFrom(chatService.rooms$);
 
             expect(expectedRoomCount).toEqual(roomsAfterJoin.length);
 
-            const otherOccupant = 'chatroom@conference.example.com/other-occupant';
+            await chatService.inviteUserToRoom(juliaJID, roomJid);
+            await chatService.logOut();
 
-            const message = await roomsAfterJoin[0].messages$.pipe(first()).toPromise();
-            expect(message.body).toEqual('message content here');
+            await chatService.logIn(juliaLogin);
+            // TODO: accept user room invite?
+            await chatService.joinRoom(roomJid);
+            const juliaRooms = await firstValueFrom(chatService.rooms$);
+            const joinedRoom = juliaRooms.find(room => room.jid.equals(roomJid));
+            await chatService.sendMessage(joinedRoom, message);
+            await chatService.logOut();
+
+            await chatService.logIn(romeoLogin);
+            const receivedMessage = await firstValueFrom(roomsAfterJoin[0].messages$);
+            expect(receivedMessage.body).toEqual(message);
         });
 
         it('should be able to send messages', async () => {
@@ -381,7 +396,7 @@ fdescribe('multi user chat plugin', () => {
             const otherOccupantJid = parseJid('chatroom@conference.example.com/other');
 
             const room = await chatService.joinRoom(otherOccupantJid);
-            const rooms = await chatService.rooms$.pipe(first()).toPromise();
+            const rooms = await firstValueFrom(chatService.rooms$);
 
             expect(rooms.length).toEqual(1);
 
@@ -391,7 +406,7 @@ fdescribe('multi user chat plugin', () => {
                 expect(occupant.nick).toEqual(otherOccupantJid.resource);
                 expect(occupant.role).toEqual(Role.none);
                 expect(occupant.affiliation).toEqual(Affiliation.none);
-                expect((await chatService.rooms$.pipe(first()).toPromise()).length).toEqual(0);
+                expect((await firstValueFrom(chatService.rooms$)).length).toEqual(0);
                 resolve();
             });
             await chatService.kickOccupant(otherOccupantJid.resource, room.jid);

@@ -1,6 +1,6 @@
 import {jid as parseJid} from '@xmpp/client';
 import {jid, JID} from '@xmpp/jid';
-import {combineLatest, mergeMap, Observable, startWith, Subject} from 'rxjs';
+import {combineLatest, filter, mergeMap, Observable, startWith, Subject} from 'rxjs';
 import {Direction} from '../../../../../core/message';
 import {IqResponseStanza, Stanza} from '../../../../../core/stanza';
 import {LogService} from '../../service/log.service';
@@ -413,7 +413,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     getRoomByJid(jid: JID): Observable<Room> {
-        return this.rooms$.pipe(map(rooms => rooms.find(room => room.jid.equals(jid.bare()))), first());
+        return this.rooms$.pipe(map(rooms => rooms.find(room => room?.jid?.equals(jid.bare()))), first());
     }
 
     async banUser(occupantJid: JID, roomJid: JID, reason?: string): Promise<IqResponseStanza> {
