@@ -147,6 +147,11 @@ A: [No problem, feel free to raise an issue](https://github.com/pazznetwork/ngx-
 ## Get Involved
 
 ### Development
+**Recommended Tools**
+Local Proxy:
+For MacOs proxyman. Install with `brew install --cask proxyman` needs permission as system proxy, sets one self in connection as webproxy
+on unexpected shutdown one should reset the settings oneself.
+
 
 **WARNING**
 Pay attention to your imports in the testing app:

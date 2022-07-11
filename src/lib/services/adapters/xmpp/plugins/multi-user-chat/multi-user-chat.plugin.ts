@@ -1,6 +1,6 @@
 import {jid as parseJid} from '@xmpp/client';
 import {jid, JID} from '@xmpp/jid';
-import {combineLatest, filter, mergeMap, Observable, startWith, Subject} from 'rxjs';
+import {combineLatest, firstValueFrom, mergeMap, Observable, startWith, Subject} from 'rxjs';
 import {Direction} from '../../../../../core/message';
 import {IqResponseStanza, Stanza} from '../../../../../core/stanza';
 import {LogService} from '../../service/log.service';
@@ -211,8 +211,6 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     async joinRoom(occupantJid: JID): Promise<Room> {
         const {room} = await this.joinRoomInternal(occupantJid);
 
-        // TODO: Why?
-        // this.rooms$.next(this.rooms$.getValue());
         return room;
     }
 
@@ -582,10 +580,16 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
             return false;
         }
 
-        this.getOrCreateRoom(occupantJid).then((room) => {
-            const statusCodes: string[] = Array.from(xEl.querySelectorAll('status')).map(status => status.getAttribute('code'));
-            const isCurrentUser = statusCodes.includes(OtherStatusCode.PresenceSelfRef);
+        const statusCodes: string[] = Array.from(xEl.querySelectorAll('status')).map(status => status.getAttribute('code'));
+        const isCurrentUser = statusCodes.includes(OtherStatusCode.PresenceSelfRef);
+        const createdRoom =  statusCodes.includes(EnteringRoomStatusCode.NewRoomCreated)
 
+        if(isCurrentUser && createdRoom) {
+            this.createdRoomSubject.next(new Room(occupantJid.bare(), this.logService));
+            return true;
+        }
+
+        this.getOrCreateRoom(occupantJid).then((room) => {
             if (!stanzaType && room.hasOccupant(subjectOccupant.jid)) {
                 const oldOccupant = room.getOccupant(subjectOccupant.jid);
                 room.handleOccupantModified(subjectOccupant, oldOccupant, isCurrentUser);
@@ -644,7 +648,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
 
     private async getOrCreateRoom(roomJid: JID): Promise<Room> {
         roomJid = roomJid.bare();
-        let room = await this.getRoomByJid(roomJid).toPromise();
+        let room = await firstValueFrom(this.getRoomByJid(roomJid));
         if (!room) {
             room = new Room(roomJid, this.logService);
             this.createdRoomSubject.next(room);
@@ -656,7 +660,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
         if (await this.getRoomByJid(roomJid.bare()).toPromise()) {
             throw new Error('can not join room more than once: ' + roomJid.bare().toString());
         }
-        const userJid = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const userJid = await firstValueFrom(this.xmppChatAdapter.chatConnectionService.userJid$);
         const occupantJid = parseJid(roomJid.local, roomJid.domain, roomJid.resource || userJid.split('@')[0]);
 
         try {

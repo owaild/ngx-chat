@@ -1,6 +1,5 @@
 import {IqResponseStanza} from '../../../../core/stanza';
 import {removeDuplicates} from '../../../../core/utils-array';
-import {nsPubSub, PublishSubscribePlugin} from './publish-subscribe.plugin';
 import {ChatConnection} from '../interface/chat-connection';
 import {ChatPlugin} from '../../../../core/plugin';
 import {Builder} from '../interface/builder';
@@ -31,7 +30,7 @@ export class BookmarkPlugin implements ChatPlugin {
     private pendingAddConference: Promise<IqResponseStanza<'result'>> | null = null;
 
     constructor(private readonly chatAdapter: XmppChatAdapter) {
-        chatAdapter.onBeforeOnline$.subscribe(async () => this.bookmarkSubject.next(await this.getBooksMarks()))
+       //chatAdapter.onBeforeOnline$.subscribe(async () => this.bookmarkSubject.next(await this.getBooksMarks()))
     }
 
     registerHandler(connection: ChatConnection): Promise<void> {

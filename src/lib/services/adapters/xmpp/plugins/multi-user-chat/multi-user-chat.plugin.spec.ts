@@ -347,26 +347,26 @@ fdescribe('multi user chat plugin', () => {
     fdescribe('room messaging', () => {
 
         fit('should be able to receive messages', async () => {
-            const roomJid = parseJid('chatroom', 'conference.example.com');
+            const newRoom = createRoomConfig('chatroom');
             const message = 'message content here';
 
             await chatService.logIn(romeoLogin);
 
             const roomsBeforeJoin = await firstValueFrom(chatService.rooms$);
             const expectedRoomCount = roomsBeforeJoin.length++;
-            await chatService.joinRoom(roomJid);
+            const room = await chatService.createRoom(newRoom);
             const roomsAfterJoin = await firstValueFrom(chatService.rooms$);
 
             expect(expectedRoomCount).toEqual(roomsAfterJoin.length);
 
-            await chatService.inviteUserToRoom(juliaJID, roomJid);
+            await chatService.inviteUserToRoom(juliaJID, room.jid);
             await chatService.logOut();
 
             await chatService.logIn(juliaLogin);
             // TODO: accept user room invite?
-            await chatService.joinRoom(roomJid);
+            await chatService.joinRoom(room.jid);
             const juliaRooms = await firstValueFrom(chatService.rooms$);
-            const joinedRoom = juliaRooms.find(room => room.jid.equals(roomJid));
+            const joinedRoom = juliaRooms.find(room => room.jid.equals(room.jid));
             await chatService.sendMessage(joinedRoom, message);
             await chatService.logOut();
 
