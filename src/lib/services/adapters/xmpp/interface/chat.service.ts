@@ -90,7 +90,7 @@ export interface ChatService {
      * Plugins may now initialize, for example load the contact list or request archived messages. When all plugins have completed the
      * initialization, the new state will be 'online'.
      */
-    state$: BehaviorSubject<ConnectionStates>;
+    state$: Observable<ConnectionStates>;
 
     /**
      * A BehaviorSubject of all known contacts. Contains for example Contacts that sent you a message or blocked contacts.
@@ -212,16 +212,16 @@ export interface ChatService {
 
     /**
      * Adds the given contact to the user roster. Will send a subscription request to the contact.
-     * @param identifier The ID of the contact.
+     * @param jid The ID of the contact.
      */
-    addContact(identifier: string): Promise<void>;
+    addContact(jid: string): Promise<void>;
 
     /**
      * Removes the given contact from the user roster. Will cancel a presence subscription from the user to the contact and will retract
      * accepted subscriptions from the contact to the user.
-     * @param identifier The ID of the contact.
+     * @param jid The ID of the contact.
      */
-    removeContact(identifier: string): Promise<void>;
+    removeContact(jid: string): Promise<void>;
 
     /**
      * Logs the user in. Will modify state$ accordingly. If login fails, state will stay in 'disconnected'.

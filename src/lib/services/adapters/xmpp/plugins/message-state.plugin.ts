@@ -12,6 +12,7 @@ import {MessageReceivedEvent} from './message.plugin';
 import {PublishSubscribePlugin} from './publish-subscribe.plugin';
 import {ChatPlugin} from '../../../../core/plugin';
 import {Builder} from '../interface/builder';
+import {combineLatest} from 'rxjs';
 
 export interface StateDate {
     lastRecipientReceived: Date;
@@ -43,10 +44,10 @@ export class MessageStatePlugin implements ChatPlugin {
         private readonly logService: LogService,
         private readonly entityTimePlugin: EntityTimePlugin,
     ) {
-        this.chatMessageListRegistry.openChats$
-            .pipe(filter(() => xmppChatAdapter.state$.getValue() === 'online'))
-            .subscribe(contacts => {
-                contacts.forEach(async contact => {
+        combineLatest([this.chatMessageListRegistry.openChats$, xmppChatAdapter.state$])
+            .pipe(filter(([, state]) => state === 'online'))
+            .subscribe(([contacts]) => {
+                contacts.forEach(async (contact) => {
                     if (contact.mostRecentMessageReceived) {
                         await this.sendMessageStateNotification(
                             contact.jidBare,

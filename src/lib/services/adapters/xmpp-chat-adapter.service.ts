@@ -1,6 +1,6 @@
 import {Inject, Injectable, NgZone} from '@angular/core';
 import {jid as parseJid} from '@xmpp/client';
-import {BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject} from 'rxjs';
+import {BehaviorSubject, combineLatest, firstValueFrom, merge, Observable, ReplaySubject, Subject} from 'rxjs';
 import {filter, first, map} from 'rxjs/operators';
 import {Contact} from '../../core/contact';
 import {dummyAvatarContact} from '../../core/contact-avatar';
@@ -23,7 +23,7 @@ import {MessageArchivePlugin} from './xmpp/plugins/message-archive.plugin';
 import {MessagePlugin} from './xmpp/plugins/message.plugin';
 import {MultiUserChatPlugin} from './xmpp/plugins/multi-user-chat/multi-user-chat.plugin';
 import {RosterPlugin} from './xmpp/plugins/roster.plugin';
-import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnection, ChatConnectionFactory, ChatStates} from './xmpp/interface/chat-connection';
+import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnection, ChatConnectionFactory} from './xmpp/interface/chat-connection';
 import {XmppHttpFileUploadHandler} from './xmpp/plugins/xmpp-http-file-upload.handler';
 import {JID} from '@xmpp/jid';
 import {MucSubPlugin} from './xmpp/plugins/muc-sub.plugin';
@@ -83,7 +83,7 @@ export class XmppChatAdapter implements ChatService {
     readonly contactsUnaffiliated$: Observable<Contact[]> = this.notBlockedContacts$.pipe(
         map(contacts => contacts.filter(contact => contact.isUnaffiliated() && contact.messages.length > 0)));
 
-    readonly state$ = new BehaviorSubject<ConnectionStates>('disconnected');
+    readonly state$: Observable<ConnectionStates>;
 
     /**
      * Observable for plugins to clear up data.
@@ -181,10 +181,10 @@ export class XmppChatAdapter implements ChatService {
             this.onOfflineSubject
         );
 
+        this.state$ = this.chatConnectionService.stateSubject.asObservable();
+
         this.state$.subscribe((state) => this.logService.info('state changed to:', state));
-        this.chatConnectionService.state$
-            .pipe(filter(nextState => nextState !== this.state$.getValue()))
-            .subscribe((nextState) => this.handleInternalStateChange(nextState));
+
         this.chatConnectionService.stanzaUnknown$.subscribe((stanza) => this.logService.warn('unknown stanza <=', stanza.toString()));
 
         merge(this.messageSent$, this.message$).subscribe(() => {
@@ -234,7 +234,7 @@ export class XmppChatAdapter implements ChatService {
             xmppFileUpload: new XmppHttpFileUploadHandler(httpClient, this, uploadServicePromise),
         };
 
-        this.currentLoggedInUserJid$ = combineLatest([this.chatConnectionService.state$, this.currentLoggedInUserJidSubject])
+        this.currentLoggedInUserJid$ = combineLatest([this.chatConnectionService.stateSubject, this.currentLoggedInUserJidSubject])
             .pipe(filter(([state, jid]) => state === 'online' && jid != null), map(([, jid]) => jid));
         this.onInvitation$ = this.plugins.muc.invitation$;
     }
@@ -282,27 +282,8 @@ export class XmppChatAdapter implements ChatService {
         return MessageState.UNKNOWN;
     }
 
-    private handleInternalStateChange(newState: ChatStates) {
-        // TODO make unnecessary
-        /* if (newState === 'online') {
-             this.state$.next('connecting');
-             Promise
-                 .all(this.plugins.map(plugin => plugin.onBeforeOnline()))
-                 .catch((e) => this.logService.error('error while connecting', e))
-                 .finally(async () => await this.announceAvailability());
-         } else {
-             if (this.state$.getValue() === 'online') {
-                 // clear data the first time we transition to a not-online state
-                 this.onOffline();
-             }
-             this.state$.next('disconnected');
-         }*/
-    }
-
     private async announceAvailability() {
-        this.logService.info('announcing availability');
         await this.chatConnectionService.$pres().send();
-        this.state$.next('online');
     }
 
     async reloadContacts(): Promise<void> {
@@ -332,29 +313,30 @@ export class XmppChatAdapter implements ChatService {
         return contact;
     }
 
-    async addContact(identifier: string) {
-        await this.plugins.roster.addRosterContact(identifier);
+    async addContact(jid: string) {
+        await this.plugins.roster.addRosterContact(jid);
     }
 
-    async removeContact(identifier: string) {
-        await this.plugins.roster.removeRosterContact(identifier);
+    async removeContact(jid: string) {
+        await this.plugins.roster.removeRosterContact(jid);
     }
 
     async logIn(logInRequest: LogInRequest) {
         this.lastLogInRequest = logInRequest;
-        if (this.state$.getValue() === 'disconnected') {
+        const state = await firstValueFrom(this.state$);
+        if (state === 'disconnected') {
             await this.chatConnectionService.logIn(logInRequest);
             const {username, domain} = logInRequest;
             this.currentLoggedInUserJidSubject.next(`${username}@${domain}`.toLowerCase());
-            await this.plugins.disco.servicesInitialized$.pipe(first()).toPromise();
-            await this.onOnline$.pipe(first()).toPromise()
+            await firstValueFrom(this.plugins.disco.servicesInitialized$);
+            await firstValueFrom(this.onOnline$);
         }
     }
 
     async logOut(): Promise<void> {
         await this.chatConnectionService.logOut();
         this.currentLoggedInUserJidSubject.next(null);
-        await this.onOffline$.pipe(first()).toPromise();
+        await firstValueFrom(this.onOffline$);
         console.log('OFFLINE FIRED')
     }
 

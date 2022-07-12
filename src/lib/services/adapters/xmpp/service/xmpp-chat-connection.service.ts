@@ -7,8 +7,52 @@ import {LogInRequest} from '../../../../core/log-in-request';
 import {LogService} from './log.service';
 import {XmppResponseError} from '../shared/xmpp-response.error';
 import {first} from 'rxjs/operators';
-import {ChatConnection, ChatConnectionFactory, ChatStates, ClientStatus} from '../interface/chat-connection';
+import {ChatConnection, ChatConnectionFactory } from '../interface/chat-connection';
 import {toXMLElement, XmppClientStanzaBuilder} from '../xmpp-client-stanza-builder';
+import {ConnectionStates} from '../interface/chat.service';
+
+enum ClientStatus {
+    /**
+     * indicates that xmpp is authenticated and addressable. It is emitted every time there is a successfull (re)connection.
+     */
+    online = 'online',
+    /**
+     * indicates that xmpp disconnected and no automatic attempt to reconnect will happen (after calling xmpp.stop()).
+     */
+    offline = 'offline',
+    /**
+     * Socket is connecting
+     */
+    connecting = 'connecting',
+    /**
+     * Socket is connected
+     */
+    connect = 'connect',
+    /**
+     * Stream is opening
+     */
+    opening = 'connect',
+    /**
+     * Stream is open
+     */
+    open = 'open',
+    /**
+     * Stream is closing
+     */
+    closing = 'closing',
+    /**
+     * Stream is closed
+     */
+    close = 'close',
+    /**
+     * Socket is disconnecting
+     */
+    disconnecting = 'disconnecting',
+    /**
+     * Socket is disconnected
+     */
+    disconnect = 'disconnect',
+}
 
 @Injectable()
 export class XmppChatConnectionFactory implements ChatConnectionFactory {
@@ -32,7 +76,7 @@ export class XmppChatConnectionFactory implements ChatConnectionFactory {
  */
 export class XmppChatConnectionService implements ChatConnection {
 
-    public readonly state$ = new BehaviorSubject<ChatStates>('disconnected');
+    public readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
     public readonly stanzaUnknown$ = new Subject<Element>();
     public readonly userJid$: Observable<string>;
 
@@ -55,7 +99,7 @@ export class XmppChatConnectionService implements ChatConnection {
     public onOnline(jid: JID): void {
         this.logService.info('online =', 'online as', jid.toString());
         this.userJidSubject.next(jid.toString());
-        this.state$.next('online');
+        this.stateSubject.next('online');
     }
 
     private onOffline(): void {
@@ -131,7 +175,7 @@ export class XmppChatConnectionService implements ChatConnection {
                     this.onOnline(value);
                     break;
                 case ClientStatus.offline:
-                    this.state$.next('disconnected');
+                    this.stateSubject.next('disconnected');
                     this.onOffline();
                     await this.logOut();
                     break;
@@ -143,7 +187,7 @@ export class XmppChatConnectionService implements ChatConnection {
                 case ClientStatus.close:
                 case ClientStatus.disconnecting:
                 case ClientStatus.disconnect:
-                    this.state$.next('reconnecting');
+                    this.stateSubject.next('connecting');
                     break;
 
             }
@@ -176,7 +220,7 @@ export class XmppChatConnectionService implements ChatConnection {
         this.logService.debug('logging out');
         try {
             await this.send(xml('presence', {type: 'unavailable'}));
-            this.state$.next('disconnected'); // after last send
+            this.stateSubject.next('disconnected'); // after last send
             this.client.reconnect.stop();
         } catch (e) {
             this.logService.error('error sending presence unavailable');
@@ -191,7 +235,7 @@ export class XmppChatConnectionService implements ChatConnection {
 
     reconnectSilently(): void {
         this.logService.warn('hard reconnect...');
-        this.state$.next('disconnected');
+        this.stateSubject.next('disconnected');
         void this.client.reconnect.reconnect();
     }
 

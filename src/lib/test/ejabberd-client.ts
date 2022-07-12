@@ -194,6 +194,18 @@ export class EjabberdClient {
         });
     }
 
+    async cleanUpJabber(domain: string) {
+        const rooms = await this.getMucRooms();
+        for (const room of rooms) {
+            await this.destroyRoom(room.split('@')[0]);
+        }
+        const registeredUsers = await this.registeredUsers();
+        const usersToDelete = registeredUsers.filter(user => !user.includes('admin'));
+        for (const user of usersToDelete) {
+            await this.unregister({username: user, domain});
+        }
+    };
+
     async destroyRoom(room: string, service = 'conference.local-jabber.entenhausen.pazz.de') {
         return await this.executeRequest('destroy_room', {
             name: room,

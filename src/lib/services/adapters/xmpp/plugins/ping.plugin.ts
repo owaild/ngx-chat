@@ -5,6 +5,7 @@ import {LogService} from '../service/log.service';
 import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
 import {IqResponseStanza} from '../../../../core/stanza';
 import {ChatPlugin} from '../../../../core/plugin';
+import {firstValueFrom} from 'rxjs';
 
 const nsPing = 'urn:xmpp:ping';
 
@@ -43,8 +44,8 @@ export class PingPlugin implements ChatPlugin {
             await timeout(this.sendPing(), 10_000);
             this.logService.debug('... pong');
         } catch {
-            if (this.xmppChatAdapter.state$.getValue() === 'online'
-                && this.xmppChatAdapter.chatConnectionService.state$.getValue() === 'online') {
+            const state = await firstValueFrom(this.xmppChatAdapter.state$);
+            if (state === 'online') {
                 this.logService.error('... pong errored,  connection should be online, waiting for browser websocket timeout');
             }
         }

@@ -29,7 +29,7 @@ export class MucComponent implements OnInit, OnDestroy {
     moderatorNick = '';
 
     rooms$: Observable<Room[]>;
-    readonly state$: Observable<ConnectionStates> = this.chatService.state$.asObservable();
+    readonly state$: Observable<ConnectionStates> = this.chatService.state$;
 
     occupants$: Observable<RoomOccupant[]>;
 

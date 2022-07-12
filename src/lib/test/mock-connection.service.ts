@@ -64,7 +64,7 @@ export class MockConnectionService extends StropheChatConnectionService {
                     case Strophe.Status.CONNFAIL:
                     case Strophe.Status.AUTHFAIL:
                     case Strophe.Status.CONNTIMEOUT:
-                        this.state$.next('disconnected');
+                        this.stateSubject.next('disconnected');
                         this.onOffline();
                         reject('connection failed with status code: ' + status);
                         break;

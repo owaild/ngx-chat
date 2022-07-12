@@ -9,8 +9,7 @@ import {StropheStanzaBuilder} from '../strophe-stanza-builder';
 import {StropheConnection} from '../strophe-connection';
 import {filter} from 'rxjs/operators';
 import {XmppResponseError} from '../shared/xmpp-response.error';
-
-export type XmppChatStates = 'disconnected' | 'online' | 'reconnecting';
+import {ConnectionStates} from '../interface/chat.service';
 
 export class StropheChatConnectionFactory implements ChatConnectionFactory {
     create(logService: LogService,
@@ -43,8 +42,7 @@ export class StropheChatConnectionService implements ChatConnection {
 
     private readonly userJidSubject = new BehaviorSubject<string>(null);
 
-    // TODO: Delete
-    readonly state$ = new BehaviorSubject<XmppChatStates>('disconnected');
+    readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
     readonly stanzaUnknown$ = new Subject<Stanza>();
 
     /**
@@ -83,7 +81,7 @@ export class StropheChatConnectionService implements ChatConnection {
         this.logService.info('online =', 'online as', jid.toString());
         this.userJid = jid;
         this.userJidSubject.next(jid.toString());
-        this.state$.next('online');
+        this.stateSubject.next('online');
         this.onOnlineSubject.next();
     }
 
@@ -122,7 +120,7 @@ export class StropheChatConnectionService implements ChatConnection {
                     case Strophe.Status.CONNFAIL:
                     case Strophe.Status.AUTHFAIL:
                     case Strophe.Status.CONNTIMEOUT:
-                        this.state$.next('disconnected');
+                        this.stateSubject.next('disconnected');
                         this.onOffline();
                         reject('connection failed with status code: ' + status);
                         break;
@@ -148,7 +146,7 @@ export class StropheChatConnectionService implements ChatConnection {
         this.logService.debug('logging out');
         try {
             await this.$pres({type: 'unavailable'}).send();
-            this.state$.next('disconnected'); // after last send
+            this.stateSubject.next('disconnected'); // after last send
             this.connection.disconnect('regular logout');
             this.connection.reset();
         } catch (e) {
@@ -159,7 +157,7 @@ export class StropheChatConnectionService implements ChatConnection {
 
     reconnectSilently(): void {
         this.logService.warn('hard reconnect...');
-        this.state$.next('disconnected');
+        this.stateSubject.next('disconnected');
         this.connection.restore();
     }
 

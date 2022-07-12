@@ -52,19 +52,6 @@ function roomIdToJid(id: string): JID {
     return jid(id + '@' + 'conference.' + romeoLogin.domain);
 }
 
-const cleanUpJabber = async () => {
-    const client = new EjabberdClient();
-    const rooms = await client.getMucRooms();
-    for (const room of rooms) {
-        await client.destroyRoom(room.split('@')[0]);
-    }
-    const registeredUsers = await client.registeredUsers();
-    const usersToDelete = registeredUsers.filter(user => !user.includes('admin'));
-    for (const user of usersToDelete) {
-        await client.unregister({username: user, domain});
-    }
-};
-
 fdescribe('multi user chat plugin', () => {
 
     let chatService: XmppChatAdapter;
@@ -88,7 +75,6 @@ fdescribe('multi user chat plugin', () => {
     const currentRoomCount = async () => await firstValueFrom(chatService.rooms$.pipe(map(arr => arr.length)));
 
     beforeAll(async () => {
-
         TestBed.configureTestingModule({
             providers: [
                 ChatMessageListRegistryService,
@@ -106,7 +92,7 @@ fdescribe('multi user chat plugin', () => {
 
         chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppChatAdapter;
         client = new EjabberdClient();
-        await cleanUpJabber();
+        await client.cleanUpJabber(domain);
         await client.register(romeoLogin);
         await client.register(juliaLogin);
         await client.register(ghostLogin);
@@ -456,7 +442,6 @@ fdescribe('multi user chat plugin', () => {
         });
 
         it('should be able to change nick', async (resolve) => {
-
             const myOccupantJid = parseJid('chatroom@conference.example.com/something');
             const room = await chatService.joinRoom(myOccupantJid);
 

@@ -24,8 +24,10 @@ export class IndexComponent {
     otherJid?: string;
     registrationMessage?: string;
 
+    chatService: ChatService;
+
     constructor(
-        @Inject(CHAT_SERVICE_TOKEN) public chatService: ChatService,
+        @Inject(CHAT_SERVICE_TOKEN) chatService: ChatService,
         private contactFactory: ContactFactoryService,
         private logService: LogService,
         private chatListStateService: ChatListStateService,
@@ -43,12 +45,10 @@ export class IndexComponent {
         this.password = contactData.password;
         this.username = contactData.username;
 
-        this.chatService.state$.subscribe((state) => IndexComponent.stateChanged(state));
+        chatService.state$.subscribe((state) => IndexComponent.stateChanged(state));
+        this.chatService = chatService;
 
         chatBackgroundNotificationService.enable();
-
-        // @ts-ignore
-        window.chatService = chatService;
     }
 
     async onLogin() {

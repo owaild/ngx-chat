@@ -3,51 +3,7 @@ import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {LogInRequest} from '../../../../core/log-in-request';
 import {Builder} from './builder';
 import {LogService} from '../service/log.service';
-
-export type ChatStates = 'disconnected' | 'online' | 'reconnecting';
-
-export enum ClientStatus {
-    /**
-     * indicates that xmpp is authenticated and addressable. It is emitted every time there is a successfull (re)connection.
-     */
-    online = 'online',
-    /**
-     * indicates that xmpp disconnected and no automatic attempt to reconnect will happen (after calling xmpp.stop()).
-     */
-    offline = 'offline',
-    /**
-     * Socket is connecting
-     */
-    connecting = 'connecting',
-    /**
-     * Socket is connected
-     */
-    connect = 'connect',
-    /**
-     * Stream is opening
-     */
-    opening = 'connect',
-    /**
-     * Stream is open
-     */
-    open = 'open',
-    /**
-     * Stream is closing
-     */
-    closing = 'closing',
-    /**
-     * Stream is closed
-     */
-    close = 'close',
-    /**
-     * Socket is disconnecting
-     */
-    disconnecting = 'disconnecting',
-    /**
-     * Socket is disconnected
-     */
-    disconnect = 'disconnect',
-}
+import {ConnectionStates} from './chat.service';
 
 export const CHAT_CONNECTION_FACTORY_TOKEN = new InjectionToken<ChatConnectionFactory>('ngxChatConnectionFactory');
 
@@ -58,7 +14,7 @@ export const CHAT_CONNECTION_FACTORY_TOKEN = new InjectionToken<ChatConnectionFa
  * @see https://xmpp.org/rfcs/rfc3921.html
  */
 export interface ChatConnection {
-    readonly state$: BehaviorSubject<ChatStates>;
+    readonly stateSubject: BehaviorSubject<ConnectionStates>;
     readonly stanzaUnknown$: Subject<Element>;
 
     /**
