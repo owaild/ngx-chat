@@ -7,10 +7,9 @@ import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
 import {first} from 'rxjs/operators';
 import {ChatPlugin} from '../../../../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
-import {ConnectionStates} from '../interface/chat.service';
 import {Finder} from '../shared/finder';
 import {nsMuc} from './multi-user-chat/multi-user-chat-constants';
-import {Subject} from 'rxjs';
+import {firstValueFrom, Subject} from 'rxjs';
 
 /**
  * Current @TODOS:
@@ -50,7 +49,7 @@ export class RosterPlugin implements ChatPlugin {
     }
 
     async registerHandler(connection: ChatConnection): Promise<void> {
-        const from = await this.chatService.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const from = await firstValueFrom(this.chatService.chatConnectionService.userJid$);
 
         this.authorizePresenceSubscriptionSubject.subscribe(async (jid) => await this.authorizePresenceSubscription(jid));
 
@@ -141,7 +140,7 @@ export class RosterPlugin implements ChatPlugin {
 
         const fromJid = stanza.getAttribute('from');
         if (userJid.split('/')[0] === fromJid.split('/')[0]) {
-            return this.handleOwnPresence(stanza, userJid, fromJid);
+            return true;
         }
 
         const stanzaFinder = Finder.create(stanza);
@@ -358,26 +357,6 @@ export class RosterPlugin implements ChatPlugin {
 
     refreshRosterContacts() {
         return this.getRosterContacts();
-    }
-
-    private handleOwnPresence(stanza: PresenceStanza, userJid: string, fromJid: string) {
-        const resource = this.getResourceFromJid(fromJid);
-        const presenceType = stanza.getAttribute('type');
-        if (resource && userJid !== fromJid && presenceType !== 'unavailable') {
-            // another resource of the current user changed it status.
-            const show = stanza.querySelector('show')?.textContent || 'online';
-            this.chatService.state$.next(show as ConnectionStates);
-        }
-        return true;
-    }
-
-    private getResourceFromJid(jid: string) {
-        const index = jid.indexOf('/');
-        if (index === -1) {
-            return null;
-        }
-
-        return jid.substring(index);
     }
 
     private handleRosterXPush(elem: Element): boolean {
