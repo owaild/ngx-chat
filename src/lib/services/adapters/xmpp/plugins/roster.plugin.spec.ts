@@ -1,7 +1,4 @@
 import {TestBed} from '@angular/core/testing';
-import {xml} from '@xmpp/client';
-import {Presence} from '../../../../core/presence';
-import {ContactSubscription} from '../../../../core/subscription';
 import {testLogService} from '../../../../test/log-service';
 import {ContactFactoryService} from '../service/contact-factory.service';
 import {LogService} from '../service/log.service';
@@ -13,6 +10,8 @@ import {CHAT_SERVICE_TOKEN} from '../interface/chat.service';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
 import {HttpBackend, HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
 import {StropheChatConnectionFactory} from '../service/strophe-chat-connection.service';
+import {jid} from '@xmpp/jid';
+import {firstValueFrom} from 'rxjs';
 
 const domain = 'local-jabber.entenhausen.pazz.de';
 const service = 'wss://' + domain + ':5280/websocket';
@@ -30,6 +29,9 @@ const bobLogin: LogInRequest = {
     username: 'bob',
     password: 'bob'
 };
+
+const timJID = jid(timLogin.username + '@' + timLogin.domain);
+const bobJID = jid(bobLogin.username + '@' + bobLogin.domain);
 
 describe('roster plugin', () => {
 
@@ -65,10 +67,13 @@ describe('roster plugin', () => {
     })
 
 
-    it('should handle adding a contact with a pending request to roster', async () => {
+    fit('should handle adding a contact with a pending request to roster', async () => {
         await chatService.logIn(bobLogin);
 
-        chatService.addContact()
+        await chatService.addContact(timJID.toString());
+        const contacts = await firstValueFrom(chatService.contacts$);
+
+        expect(contacts.length).toEqual(1);
     });
 
     it('should be able to reject a contact request', async () => {

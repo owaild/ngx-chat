@@ -52,7 +52,7 @@ function roomIdToJid(id: string): JID {
     return jid(id + '@' + 'conference.' + romeoLogin.domain);
 }
 
-fdescribe('multi user chat plugin', () => {
+describe('multi user chat plugin', () => {
 
     let chatService: XmppChatAdapter;
     let client: EjabberdClient;
@@ -330,9 +330,9 @@ fdescribe('multi user chat plugin', () => {
         });
     });
 
-    fdescribe('room messaging', () => {
+    describe('room messaging', () => {
 
-        fit('should be able to receive messages', async () => {
+        it('should be able to receive messages', async () => {
             const newRoom = createRoomConfig('chatroom');
             const message = 'message content here';
 

@@ -32,6 +32,25 @@ export class StropheChatConnectionFactory implements ChatConnectionFactory {
     }
 }
 
+export type ConnectionUrls = { domain: string, boshServiceUrl?: string, websocketUrl?: string };
+
+export function getConnectionsUrls({service, domain}: Pick<LogInRequest, 'service' | 'domain'>): ConnectionUrls {
+    const isWebsocket = /wss?:\/\//.test(service);
+
+    return {
+        domain: domain,
+        boshServiceUrl: isWebsocket ? undefined : service,
+        websocketUrl: isWebsocket ? service : undefined,
+    };
+}
+
+const errorMessages = {
+    [Strophe.Status.ERROR]: 'An error occurred connecting',
+    [Strophe.Status.CONNFAIL]: 'The connection failed',
+    [Strophe.Status.AUTHFAIL]: 'The authentication failed',
+    [Strophe.Status.CONNTIMEOUT]: 'The connection timed out',
+};
+
 /**
  * Implementation of the XMPP specification according to RFC 6121.
  * @see https://xmpp.org/rfcs/rfc6121.html
@@ -95,11 +114,7 @@ export class StropheChatConnectionService implements ChatConnection {
             this.logService.warn('username should not contain domain, only local part, this can lead to errors!');
         }
         const jid = logInRequest.username + '@' + logInRequest.domain;
-        const connectionURLs = {
-            domain: logInRequest.domain,
-            boshServiceUrl: logInRequest.service.includes('ws:\\\\') ? undefined : logInRequest.service,
-            websocketUrl: logInRequest.service.includes('ws:\\\\') ? logInRequest.service : undefined,
-        };
+        const connectionURLs = getConnectionsUrls(logInRequest);
         this.connection = await StropheConnection.createConnection(this.logService, connectionURLs);
         return new Promise((resolve, reject) => {
             this.connection.connect(jid, logInRequest.password, (status: Strophe.Status, value: string) => {
@@ -122,7 +137,7 @@ export class StropheChatConnectionService implements ChatConnection {
                     case Strophe.Status.CONNTIMEOUT:
                         this.stateSubject.next('disconnected');
                         this.onOffline();
-                        reject('connection failed with status code: ' + status);
+                        reject(`${errorMessages[status]}, failed with status code: ${status}`);
                         break;
                     case Strophe.Status.BINDREQUIRED:
                         this.connection.bind();

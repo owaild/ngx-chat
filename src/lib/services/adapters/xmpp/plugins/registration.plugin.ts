@@ -1,6 +1,7 @@
 import {LogService} from '../service/log.service';
-import {StropheChatConnectionService} from '../service/strophe-chat-connection.service';
+import {getConnectionsUrls, StropheChatConnectionService} from '../service/strophe-chat-connection.service';
 import {StropheConnection} from '../strophe-connection';
+import {reject} from 'lodash-es';
 
 const nsXForm = 'jabber:x:data';
 const nsRegister = 'jabber:iq:register';
@@ -50,110 +51,84 @@ export class RegistrationPlugin {
 
         console.log('REGISTER CALL');
 
-        const connectionURLs = {
-            domain: domain,
-            boshServiceUrl: service.includes('ws:\\\\') ? undefined : service,
-            websocketUrl: service.includes('ws:\\\\') ? service : undefined,
-        };
+        const connectionURLs = getConnectionsUrls({domain, service});
 
-        this.connectionService.connection = this.connectionService.connection ?? await StropheConnection.createConnection(this.logService, connectionURLs);
+        this.connectionService.connection = await StropheConnection.createConnection(this.logService, connectionURLs);
 
-        /*      const conn = this.connectionService.connection;
-                const connect_cb = conn._connect_cb.bind(conn);
-                conn._connect_cb = (req, callback, raw) => {
-                    if (!this._registering) {
-                        connect_cb(req, callback, raw);
-                    } else {
-                        if (this.getRegistrationFields(req, callback)) {
-                            this._registering = false;
-                        }
-                    }
-                };*/
+        return new Promise<void>((resolve, reject) => {
+            try {
+                this._registering = true;
 
-        try {
-            this._registering = true;
+                this.connectionService.connection?.connect(domain, '',
+                    (statusCode, _, req) => {
+                        this.getRegistrationFields(req as any).then(() => {
+                            resolve();
+                        }).catch((e) => {
+                            reject(e);
+                        });
 
-
-            // const jid = username + '@' + domain;
-            this.connectionService.connection?.connect(domain, '', status => this.onConnectStatusChanged(status, {
-                username,
-                password,
-                domain
-            }));
-
-            // await this.connectionService.connection.connectedSubject.pipe(first()).toPromise();
-
-            this.connectionService.connection._addSysHandler((stanza: Element) => {
-                if (stanza.getAttribute('type') === 'error') {
-                    this.logService.error('Registration failed.', stanza);
-                    let error = stanza.getElementsByTagName('error');
-                    if (error.length !== 1) {
-                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
-                        return false;
-                    }
-                    const errorText = error[0].firstElementChild.tagName.toLowerCase();
-                    if (errorText === 'conflict') {
-                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.CONFLICT, errorText);
-                    } else if (errorText === 'not-acceptable') {
-                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.NOTACCEPTABLE, errorText);
-                    } else {
-                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL, errorText);
-                    }
-                } else {
-                    this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGISTERED, null);
-                }
-                return false;
-            }, null, 'iq', null, null);
-
-            console.log('Before Register');
-            await this.connectionService
-                .$iq({type: 'set'})
-                .c('query', {xmlns: nsRegister})
-                .c('x', {xmlns: nsXForm, type: 'submit'})
-                .c('username', {}, username)
-                .up().c('password', {}, password)
-                .send();
-
-            await this.connectionService.logIn({username, password, service, domain});
-
-            this._registering = false;
-            console.log('After Register');
-        } catch (e) {
-            this.logService.warn('error registering', e);
-            throw e;
-        }
-    }
-
-    /**
-     * Callback function called by Strophe whenever the connection status changes.
-     * Passed to Strophe specifically during a registration attempt.
-     * @private
-     * @method _converse.RegisterPanel#onConnectStatusChanged
-     * @param { number } status_code - The Strophe.Status status code
-     * @param auth - data used for registration used now for login
-     */
-    onConnectStatusChanged(status_code: number, auth: { password: string; domain: string; username: string }): void {
-        console.log('StatusChangeCalled: ', status_code);
-        if ([Strophe.Status.DISCONNECTED,
-            Strophe.Status.CONNFAIL,
-            StropheRegisterStatus.REGIFAIL,
-            StropheRegisterStatus.NOTACCEPTABLE,
-            StropheRegisterStatus.CONFLICT
-        ].includes(status_code)) {
-            (this.connectionService.connection._proto as any)._abortAllRequests();
-            this.connectionService.connection.reset();
-        } else if (status_code === StropheRegisterStatus.REGISTERED) {
-            this.connectionService.connection.reset();
+                        /*                    console.log('StatusChangeCalled: ', statusCode);
+                                            if ([Strophe.Status.DISCONNECTED,
+                                                Strophe.Status.CONNFAIL,
+                                                StropheRegisterStatus.REGIFAIL,
+                                                StropheRegisterStatus.NOTACCEPTABLE,
+                                                StropheRegisterStatus.CONFLICT
+                                            ].includes(statusCode)) {
+                                                (connection._proto as any)._abortAllRequests();
+                                                connection.reset();
+                                            } else if (statusCode === StropheRegisterStatus.REGISTERED) {
+                                                connection.reset();
 
 
-            // automatically log the user in
-            this.connectionService.connection.connect(
-                auth.username.toLowerCase() +  '@' + auth.domain.toLowerCase(),
-                auth.password,
-            );
+                                                // automatically log the user in
+                                                connection.connect(username.toLowerCase() + '@' + domain.toLowerCase(), password);
 
-            this.reset();
-        }
+                                                this.reset();
+                                            }*/
+                    });
+
+                /*
+                            this.connectionService.connection._addSysHandler((stanza: Element) => {
+                                if (stanza.getAttribute('type') === 'error') {
+                                    this.logService.error('Registration failed.', stanza);
+                                    let error = stanza.getElementsByTagName('error');
+                                    if (error.length !== 1) {
+                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
+                                        return false;
+                                    }
+                                    const errorText = error[0].firstElementChild.tagName.toLowerCase();
+                                    if (errorText === 'conflict') {
+                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.CONFLICT, errorText);
+                                    } else if (errorText === 'not-acceptable') {
+                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.NOTACCEPTABLE, errorText);
+                                    } else {
+                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL, errorText);
+                                    }
+                                } else {
+                                    this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGISTERED, null);
+                                }
+                                return false;
+                            }, null, 'iq', null, null);
+
+                            console.log('Before Register');
+                            await this.connectionService
+                                .$iq({type: 'set'})
+                                .c('query', {xmlns: nsRegister})
+                                .c('x', {xmlns: nsXForm, type: 'submit'})
+                                .c('username', {}, username)
+                                .up().c('password', {}, password)
+                                .send();
+
+                            await this.connectionService.logIn({username, password, service, domain});
+                */
+
+                this._registering = false;
+                console.log('After Register');
+            } catch (e) {
+                this.logService.warn('error registering', e);
+                throw e;
+            }
+        });
     }
 
     /**
@@ -161,28 +136,27 @@ export class RegistrationPlugin {
      * @private
      * @method _converse.RegisterPanel#getRegistrationFields
      * @param { Strophe.Request } req - The current request
-     * @param { Function } callback - The callback function
      */
-    getRegistrationFields(req: Strophe.Request, callback: () => void) {
+    async getRegistrationFields(req: Strophe.Request): Promise<void> {
         const conn = this.connectionService.connection;
         conn.connected = true;
 
         const body = conn._proto._reqToData(req);
         if (!body) {
-            return false;
+            throw new Error(`body is empty or null, body: ${String(body)}`);
         }
         if (conn._proto._connect_cb(body) === Strophe.Status.CONNFAIL) {
-            return false;
+            throw new Error(`connect result is CONNFAIL, body: ${String(body)}`);
         }
         const register = body.getElementsByTagName('register');
         const mechanisms = body.getElementsByTagName('mechanism');
         if (register.length === 0 && mechanisms.length === 0) {
-            conn._proto._no_auth_received(callback);
-            return false;
+            conn._proto._no_auth_received(null);
+            throw new Error(`no registration and mechanisms specified, body: ${String(body)}`);
         }
         if (register.length === 0) {
             conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL);
-            return true;
+            return;
         }
 
         const onRegistrationFields = (stanza: Element) => {
@@ -191,16 +165,15 @@ export class RegistrationPlugin {
                 return false;
             }
             this.setFields(stanza);
-            return false;
+            return true;
         };
 
         // Send an IQ stanza to get all required data fields
         conn._addSysHandler(onRegistrationFields, null, 'iq', null, null);
         console.log('GET REG FIELDS RQ');
-        void this.connectionService.$iq({type: 'get', 'id': conn.getUniqueId('sendIQ')}).c('query', {xmlns: nsRegister}).send();
+        await this.connectionService.$iq({type: 'get', 'id': conn.getUniqueId('sendIQ')}).c('query', {xmlns: nsRegister}).send();
         console.log('After REG FIELDS RQ');
         conn.connected = false;
-        return true;
     }
 
     /* Stores the values that will be sent to the XMPP server during attempted registration.

@@ -4,7 +4,6 @@ import {PresenceStanza, Stanza} from '../../../../core/stanza';
 import {ContactSubscription} from '../../../../core/subscription';
 import {LogService} from '../service/log.service';
 import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
-import {first} from 'rxjs/operators';
 import {ChatPlugin} from '../../../../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 import {Finder} from '../shared/finder';
