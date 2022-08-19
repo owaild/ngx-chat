@@ -1,15 +1,16 @@
 import {LogService} from '../service/log.service';
 import {getConnectionsUrls, StropheChatConnectionService} from '../service/strophe-chat-connection.service';
 import {StropheConnection} from '../strophe-connection';
-import {reject} from 'lodash-es';
+import {Strophe} from 'strophe.js';
 
-const nsXForm = 'jabber:x:data';
+const nsXForm = 'jabber:x:data'; // currently generic registration forms are not implemented
 const nsRegister = 'jabber:iq:register';
 
 enum StropheRegisterStatus {
     REGIFAIL = 13,
-    REGISTERED = 14,
-    CONFLICT = 15,
+    REGISTER = 14,
+    REGISTERED = 15,
+    CONFLICT = 16,
     NOTACCEPTABLE = 17
 }
 
@@ -19,15 +20,6 @@ enum StropheRegisterStatus {
  * Handles registration over the XMPP chat instead of relaying on an admin user account management
  */
 export class RegistrationPlugin {
-    private registered = false;
-    private _registering = false;
-
-    fields = {};
-    urls = [];
-    title = '';
-    instructions = '';
-    domain = null;
-    form_type = null;
 
     constructor(
         private readonly logService: LogService,
@@ -45,188 +37,146 @@ export class RegistrationPlugin {
         service: string,
         domain: string
     ): Promise<void> {
+        let registering = false;
+        let processed_features = false;
+        let connect_cb_data = {req: null, raw: null};
+
         if (username.indexOf('@') > -1) {
             this.logService.warn('username should not contain domain, only local part, this can lead to errors!');
         }
 
-        console.log('REGISTER CALL');
-
         const connectionURLs = getConnectionsUrls({domain, service});
 
         this.connectionService.connection = await StropheConnection.createConnection(this.logService, connectionURLs);
-
-        return new Promise<void>((resolve, reject) => {
-            try {
-                this._registering = true;
-
-                this.connectionService.connection?.connect(domain, '',
-                    (statusCode, _, req) => {
-                        this.getRegistrationFields(req as any).then(() => {
-                            resolve();
-                        }).catch((e) => {
-                            reject(e);
-                        });
-
-                        /*                    console.log('StatusChangeCalled: ', statusCode);
-                                            if ([Strophe.Status.DISCONNECTED,
-                                                Strophe.Status.CONNFAIL,
-                                                StropheRegisterStatus.REGIFAIL,
-                                                StropheRegisterStatus.NOTACCEPTABLE,
-                                                StropheRegisterStatus.CONFLICT
-                                            ].includes(statusCode)) {
-                                                (connection._proto as any)._abortAllRequests();
-                                                connection.reset();
-                                            } else if (statusCode === StropheRegisterStatus.REGISTERED) {
-                                                connection.reset();
-
-
-                                                // automatically log the user in
-                                                connection.connect(username.toLowerCase() + '@' + domain.toLowerCase(), password);
-
-                                                this.reset();
-                                            }*/
-                    });
-
-                /*
-                            this.connectionService.connection._addSysHandler((stanza: Element) => {
-                                if (stanza.getAttribute('type') === 'error') {
-                                    this.logService.error('Registration failed.', stanza);
-                                    let error = stanza.getElementsByTagName('error');
-                                    if (error.length !== 1) {
-                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
-                                        return false;
-                                    }
-                                    const errorText = error[0].firstElementChild.tagName.toLowerCase();
-                                    if (errorText === 'conflict') {
-                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.CONFLICT, errorText);
-                                    } else if (errorText === 'not-acceptable') {
-                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.NOTACCEPTABLE, errorText);
-                                    } else {
-                                        this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL, errorText);
-                                    }
-                                } else {
-                                    this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGISTERED, null);
-                                }
-                                return false;
-                            }, null, 'iq', null, null);
-
-                            console.log('Before Register');
-                            await this.connectionService
-                                .$iq({type: 'set'})
-                                .c('query', {xmlns: nsRegister})
-                                .c('x', {xmlns: nsXForm, type: 'submit'})
-                                .c('username', {}, username)
-                                .up().c('password', {}, password)
-                                .send();
-
-                            await this.connectionService.logIn({username, password, service, domain});
-                */
-
-                this._registering = false;
-                console.log('After Register');
-            } catch (e) {
-                this.logService.warn('error registering', e);
-                throw e;
-            }
-        });
-    }
-
-    /**
-     * Send an IQ stanza to the XMPP server asking for the registration fields.
-     * @private
-     * @method _converse.RegisterPanel#getRegistrationFields
-     * @param { Strophe.Request } req - The current request
-     */
-    async getRegistrationFields(req: Strophe.Request): Promise<void> {
-        const conn = this.connectionService.connection;
-        conn.connected = true;
-
-        const body = conn._proto._reqToData(req);
-        if (!body) {
-            throw new Error(`body is empty or null, body: ${String(body)}`);
-        }
-        if (conn._proto._connect_cb(body) === Strophe.Status.CONNFAIL) {
-            throw new Error(`connect result is CONNFAIL, body: ${String(body)}`);
-        }
-        const register = body.getElementsByTagName('register');
-        const mechanisms = body.getElementsByTagName('mechanism');
-        if (register.length === 0 && mechanisms.length === 0) {
-            conn._proto._no_auth_received(null);
-            throw new Error(`no registration and mechanisms specified, body: ${String(body)}`);
-        }
-        if (register.length === 0) {
-            conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL);
-            return;
-        }
-
-        const onRegistrationFields = (stanza: Element) => {
-            if (stanza.getAttribute('type') === 'error' || stanza.getElementsByTagName('query').length !== 1) {
-                this.connectionService.connection._changeConnectStatus(StropheRegisterStatus.REGIFAIL);
-                return false;
-            }
-            this.setFields(stanza);
-            return true;
+        const conn = this.connectionService.connection as Strophe.Connection & {
+            _connect_cb: (req: Strophe.Request, _callback: (arg) => void, raw: unknown) => void
         };
 
-        // Send an IQ stanza to get all required data fields
-        conn._addSysHandler(onRegistrationFields, null, 'iq', null, null);
-        console.log('GET REG FIELDS RQ');
-        await this.connectionService.$iq({type: 'get', 'id': conn.getUniqueId('sendIQ')}).c('query', {xmlns: nsRegister}).send();
-        console.log('After REG FIELDS RQ');
-        conn.connected = false;
-    }
-
-    /* Stores the values that will be sent to the XMPP server during attempted registration.
-    * @param { Element } stanza - the IQ stanza that will be sent to the XMPP server.
-    */
-    setFields(stanza: Element) {
-        const query = stanza.querySelector('query');
-        const xform = Array.from(stanza.querySelectorAll('x')).filter(el => el.getAttribute('xmlns') === nsXForm);
-        if (xform.length > 0) {
-            this._setFieldsFromXForm(xform.pop());
-        } else {
-            this._setFieldsFromLegacy(query);
-        }
-    }
-
-    _setFieldsFromLegacy(query) {
-        [].forEach.call(query.children, (field: Element) => {
-            if (field.tagName.toLowerCase() === 'instructions') {
-                this.instructions = Strophe.getText(field);
-                return;
-            } else if (field.tagName.toLowerCase() === 'x') {
-                if (field.getAttribute('xmlns') === 'jabber:x:oob') {
-                    this.urls.concat(Array.from(field.querySelectorAll('url')).map(u => u.textContent));
+        const readyToStartRegistration = new Promise<void>(resolve => {
+            // hooking strophe's _connect_cb
+            const connect_callback = conn._connect_cb.bind(conn);
+            conn._connect_cb = (req, callback, raw) => {
+                if (registering) {
+                    // Save this request in case we want to authenticate later
+                    connect_cb_data = {
+                        req: req,
+                        raw: raw
+                    };
+                    resolve();
+                    return;
                 }
-                return;
-            }
-            this.fields[field.tagName.toLowerCase()] = Strophe.getText(field);
-        });
-        this.form_type = 'legacy';
+
+                if (processed_features) {
+                    // exchange Input hooks to not print the stream:features twice
+                    const xmlInput = conn.xmlInput;
+                    conn.xmlInput = Strophe.Connection.prototype.xmlInput;
+                    const rawInput = conn.rawInput;
+                    conn.rawInput = Strophe.Connection.prototype.rawInput;
+                    connect_callback(req, callback, raw);
+                    conn.xmlInput = xmlInput;
+                    conn.rawInput = rawInput;
+                }
+
+                connect_callback(req, callback, raw);
+            };
+
+            // hooking strophe`s authenticate
+            const auth_old = conn.authenticate.bind(conn);
+            conn.authenticate = function(matched) {
+                const isMatched = typeof matched !== 'undefined';
+                if (isMatched) {
+                    auth_old(matched);
+                    return;
+                }
+                if (!this.fields.username || !this.domain || !this.fields.password) {
+                    console.info('Register a JID first!');
+                    return;
+                }
+
+                conn.jid = this.fields.username + '@' + this.domain;
+                conn.authzid = Strophe.getBareJidFromJid(conn.jid);
+                conn.authcid = Strophe.getNodeFromJid(conn.jid);
+                conn.pass = this.fields.password;
+
+                const req = this._connect_cb_data.req;
+                const raw = this._connect_cb_data.raw;
+                conn._connect_cb(req, connect_callback, raw);
+            }.bind(this);
+        })
+
+        // anonymous connection
+        conn.connect(domain, '', this.connectionService.createConnectionStatusHandler(username, domain, () => {}, () => {}), 60, 1)
+
+        registering = true;
+        await readyToStartRegistration;
+
+        await this.queryForRegistrationForm(conn, domain, username);
+        await this.submitRegisterInformationQuery(conn, username, password);
+
+        registering = false;
+        processed_features = true;
+        // here we should have switched after processing the feature's stanza to the regular callback after login
+        conn.reset();
     }
 
-    _setFieldsFromXForm(xform) {
-        this.title = xform.querySelector('title')?.textContent;
-        this.instructions = xform.querySelector('instructions')?.textContent;
-        xform.querySelectorAll('field').forEach(field => {
-            const _var = field.getAttribute('var');
-            if (_var) {
-                this.fields[_var.toLowerCase()] = field.querySelector('value')?.textContent ?? '';
-            } else {
-                // TODO: other option seems to be type="fixed"
-                this.logService.warn('Found field we couldn\'t parse');
-            }
+    private async queryForRegistrationForm(conn: Strophe.Connection, domain, username) {
+        return new Promise<void>((resolve, reject) => {
+            // send a get request for registration, to get all required data fields
+            conn._addSysHandler((stanza) => {
+                const query = stanza.getElementsByTagName('query');
+                if (query.length !== 1) {
+                    conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
+                    reject('registration failed by unknown reason');
+                    return false;
+                }
+
+                conn._changeConnectStatus(StropheRegisterStatus.REGISTER, null);
+
+                resolve();
+                return false;
+            }, null, 'iq', null, null);
+
+            conn.sendIQ($iq({type: 'get'}).c('query', {xmlns: nsRegister}).tree());
         });
     }
 
-    reset() {
-        this.fields = {};
-        this.urls = [];
-        this.title = '';
-        this.instructions = '';
-        this.registered = false;
-        this._registering = false;
-        this.domain = null;
-        this.form_type = null;
+    private async submitRegisterInformationQuery(conn: Strophe.Connection, username: string, password: string) {
+        return new Promise<void>((resolve, reject) => {
+            conn._addSysHandler((stanza) => {
+                let error = null;
+
+                if (stanza.getAttribute('type') === 'error') {
+                    error = stanza.getElementsByTagName('error');
+                    if (error.length !== 1) {
+                        conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
+                        reject();
+                        return false;
+                    }
+
+                    // this is either 'conflict' or 'not-acceptable'
+                    error = error[0].firstChild.tagName.toLowerCase();
+                    if (error === 'conflict') {
+                        conn._changeConnectStatus(StropheRegisterStatus.CONFLICT, error);
+                        reject();
+                    } else if (error === 'not-acceptable') {
+                        conn._changeConnectStatus(StropheRegisterStatus.NOTACCEPTABLE, error);
+                        reject();
+                    } else {
+                        conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL, error);
+                        reject();
+                    }
+                } else {
+                    conn._changeConnectStatus(StropheRegisterStatus.REGISTERED, null);
+                    resolve();
+                }
+
+                return false; // makes strophe delete the sysHandler
+            }, null, 'iq', null, null);
+
+            conn.sendIQ($iq({type: 'set'})
+                .c('query', {xmlns: nsRegister})
+                .c('username', {}, username)
+                .c('password', {}, password));
+        });
     }
 }

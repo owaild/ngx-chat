@@ -117,44 +117,49 @@ export class StropheChatConnectionService implements ChatConnection {
         const connectionURLs = getConnectionsUrls(logInRequest);
         this.connection = await StropheConnection.createConnection(this.logService, connectionURLs);
         return new Promise((resolve, reject) => {
-            this.connection.connect(jid, logInRequest.password, (status: Strophe.Status, value: string) => {
-                this.logService.info('status update =', status, value ? JSON.stringify(value) : '');
-                switch (status) {
-                    case Strophe.Status.REDIRECT:
-                    case Strophe.Status.ATTACHED:
-                    case Strophe.Status.CONNECTING:
-                        break;
-                    case Strophe.Status.AUTHENTICATING:
-                        break;
-                    case Strophe.Status.CONNECTED:
-                        this.onBeforeOnlineSubject.next(jid);
-                        this.onOnline(new JID(logInRequest.username, logInRequest.domain));
-                        resolve();
-                        break;
-                    case Strophe.Status.ERROR:
-                    case Strophe.Status.CONNFAIL:
-                    case Strophe.Status.AUTHFAIL:
-                    case Strophe.Status.CONNTIMEOUT:
-                        this.stateSubject.next('disconnected');
-                        this.onOffline();
-                        reject(`${errorMessages[status]}, failed with status code: ${status}`);
-                        break;
-                    case Strophe.Status.BINDREQUIRED:
-                        this.connection.bind();
-                        break;
-                    case Strophe.Status.DISCONNECTING:
-                    case Strophe.Status.DISCONNECTED:
-                        this.onOffline();
-                        break;
-                    default:
-                        this.logService.error('Unhandled connection status: ', status);
-                }
-            });
+            this.connection.connect(jid, logInRequest.password, this.createConnectionStatusHandler(logInRequest.username, logInRequest.domain, resolve, reject));
             this.connection.addHandler((el) => {
                 this.afterReceiveMessageSubject.next(el);
                 return true;
             }, null, 'message');
         });
+    }
+
+    createConnectionStatusHandler(username: string, domain: string, resolve: () => void, reject: (reason?: string) => void) {
+        return (status: Strophe.Status, value: string) => {
+            this.logService.info('status update =', status, value ? JSON.stringify(value) : '');
+
+            switch (status) {
+                case Strophe.Status.REDIRECT:
+                case Strophe.Status.ATTACHED:
+                case Strophe.Status.CONNECTING:
+                    break;
+                case Strophe.Status.AUTHENTICATING:
+                    break;
+                case Strophe.Status.CONNECTED:
+                    this.onBeforeOnlineSubject.next(`${username}@${domain}`);
+                    this.onOnline(new JID(username, domain));
+                    resolve();
+                    break;
+                case Strophe.Status.ERROR:
+                case Strophe.Status.CONNFAIL:
+                case Strophe.Status.AUTHFAIL:
+                case Strophe.Status.CONNTIMEOUT:
+                    this.stateSubject.next('disconnected');
+                    this.onOffline();
+                    reject(`${errorMessages[status]}, failed with status code: ${status}`);
+                    break;
+                case Strophe.Status.BINDREQUIRED:
+                    this.connection.bind();
+                    break;
+                case Strophe.Status.DISCONNECTING:
+                case Strophe.Status.DISCONNECTED:
+                    this.onOffline();
+                    break;
+                default:
+                    this.logService.error('Unhandled connection status: ', status);
+            }
+        };
     }
 
     async logOut(): Promise<void> {

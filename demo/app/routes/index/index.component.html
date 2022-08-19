@@ -48,8 +48,8 @@
 
     <div data-name="chat-connection-state">State: {{chatService.state$ | async}}</div>
 
-    <div *ngIf="registrationMessage">
-        <p data-name="registration-success">{{registrationMessage}}</p>
+    <div *ngIf="registrationMessage$ | async as message">
+        <p data-name="registration-success">{{message}}</p>
     </div>
 
     <hr/>

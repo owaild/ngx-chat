@@ -36,8 +36,6 @@ export class StropheConnection extends Strophe.Connection {
     // these declarations are for better work on the strophe native functions
     connected: boolean;
 
-    private readonly debouncedReconnect = debounce(this.reconnect, 3000);
-
     private bosh: Bosh;
 
     private reconnecting = false;
@@ -228,7 +226,7 @@ export class StropheConnection extends Strophe.Connection {
             if (!this.reconnecting) {
                 super.reset();
             }
-            await this.connect(this.jid.toLowerCase(), null, null);
+            await this.connect(this.jid.toLowerCase(), null);
         } else if (this.settings.authenticationMode === AuthenticationMode.LOGIN) {
             const password = credentials ? credentials.password : ((this as unknown as any).pass ?? this.settings.password);
             if (!password) {
@@ -279,7 +277,7 @@ export class StropheConnection extends Strophe.Connection {
                 automaticLogin: false,
                 password: null,
                 credentialsUrl: null,
-                prebindUrl: null
+                prebindUrl: null,
             },
             {
                 boshServiceUrl,
@@ -358,9 +356,8 @@ export class StropheConnection extends Strophe.Connection {
      * @method Connnection.connect
      * @param { String } jid userId@domain.tld/resources
      * @param { String } password
-     * @param { Function } callback
      */
-    async connect(jid: string, password: string, callback?: (status: Strophe.Status, condition: string, elem: Element) => unknown) {
+    async connect(jid: string, password: string) {
         if (this.settings.discoverConnectionMethods) {
             const domain = Strophe.getDomainFromJid(jid);
             await this.discoverConnectionMethods(domain);
@@ -369,7 +366,7 @@ export class StropheConnection extends Strophe.Connection {
             throw new Error('You must supply a value for either the bosh_service_url or websocket_url or both.');
         }
         const boshWait = 59;
-        super.connect(jid, password, callback || this.onConnectStatusChanged, boshWait);
+        super.connect(jid, password, this.onConnectStatusChanged.bind(this), boshWait);
     }
 
     /**
@@ -642,17 +639,8 @@ export class StropheConnection extends Strophe.Connection {
         }
     }
 
-    hasResumed() {
-        if (this.settings.connectionOptions.worker || this.isType('bosh')) {
-            return this.connectionStatus.status === Strophe.Status.ATTACHED;
-        } else {
-            // Not binding means that the session was resumed.
-            return !super.do_bind;
-        }
-    }
-
     restoreWorkerSession() {
-        super.attach(this.onConnectStatusChanged);
+        super.attach(this.onConnectStatusChanged.bind(this));
         super.worker_attach_promise = getOpenPromise();
         return super.worker_attach_promise;
     }
@@ -683,28 +671,6 @@ export class StropheConnection extends Strophe.Connection {
 
     killSessionBosh() {
         this.clearSession();
-    }
-
-    _changeConnectStatus(status: number, condition?: string, elem?: Element) {
-        super._changeConnectStatus(status, condition, elem);
-    }
-
-    /** PrivateFunction: _addSysHandler
-     *  _Private_ function to add a system level stanza handler.
-     *
-     *  This function is used to add a Strophe.Handler for the
-     *  library code.  System stanza handlers are allowed to run before
-     *  authentication is complete.
-     *
-     *  Parameters:
-     *    @param {(element: Element) => boolean} handler - The callback function.
-     *    @param {string} ns - The namespace to match.
-     *    @param {string} name - The stanza name to match.
-     *    @param {string} type - The stanza type attribute to match.
-     *    @param {string} id - The stanza id attribute to match.
-     */
-    _addSysHandler(handler: (element: Element) => boolean, ns: string, name: string, type: string, id: string) {
-        return super._addSysHandler(handler, ns, name, type, id);
     }
 }
 
@@ -765,7 +731,7 @@ class Bosh {
         const jid = (await this.initBOSHSession());
         if (jid && (Object.getPrototypeOf(this.connection) instanceof Strophe.Bosh)) {
             try {
-                (this.connection as Strophe.Connection).restore(jid, this.connection.onConnectStatusChanged);
+                (this.connection as Strophe.Connection).restore(jid, this.connection.onConnectStatusChanged.bind(this));
                 return true;
             } catch (e) {
                 return false;
@@ -800,7 +766,7 @@ class Bosh {
                     jid,
                     data.sid,
                     data.rid,
-                    this.connection.onConnectStatusChanged,
+                    this.connection.onConnectStatusChanged.bind(this),
                     BOSH_WAIT
                 );
             } else {
