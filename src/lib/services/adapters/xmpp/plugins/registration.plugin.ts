@@ -1,5 +1,5 @@
 import {LogService} from '../service/log.service';
-import {getConnectionsUrls, StropheChatConnectionService} from '../service/strophe-chat-connection.service';
+import {getConnectionsUrls, StropheConnectionService} from '../service/strophe-connection.service';
 import {StropheConnection} from '../strophe-connection';
 import {Strophe} from 'strophe.js';
 
@@ -23,7 +23,7 @@ export class RegistrationPlugin {
 
     constructor(
         private readonly logService: LogService,
-        private readonly connectionService: StropheChatConnectionService,
+        private readonly connectionService: StropheConnectionService,
     ) {
     }
 

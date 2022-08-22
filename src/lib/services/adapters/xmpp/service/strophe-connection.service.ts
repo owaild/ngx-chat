@@ -1,7 +1,6 @@
 import {JID} from '@xmpp/jid';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {LogInRequest} from '../../../../core/log-in-request';
-import {Stanza} from '../../../../core/stanza';
 import {LogService} from './log.service';
 import {Strophe} from 'strophe.js';
 import {ChatConnection, ChatConnectionFactory} from '../interface/chat-connection';
@@ -20,7 +19,7 @@ export class StropheChatConnectionFactory implements ChatConnectionFactory {
            onOnlineSubject: Subject<void>,
            onOfflineSubject: Subject<void>
     ): ChatConnection {
-        return new StropheChatConnectionService(
+        return new StropheConnectionService(
             logService,
             afterReceiveMessageSubject,
             afterSendMessageSubject,
@@ -57,18 +56,21 @@ const errorMessages = {
  * @see https://xmpp.org/rfcs/rfc3920.html
  * @see https://xmpp.org/rfcs/rfc3921.html
  */
-export class StropheChatConnectionService implements ChatConnection {
+export class StropheConnectionService implements ChatConnection {
 
     private readonly userJidSubject = new BehaviorSubject<string>(null);
+    readonly userJid$ = this.userJidSubject.pipe(filter(jid => jid != null));
 
-    readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
-    readonly stanzaUnknown$ = new Subject<Stanza>();
+    private readonly stanzaUnknownSubject = new Subject<Element>();
+    readonly stanzaUnknown$ = this.stanzaUnknownSubject.asObservable();
+
+    private readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
+    readonly state$ = this.stateSubject.asObservable();
 
     /**
      * User JID with resource, not bare.
      */
     userJid?: JID;
-    userJid$: Observable<string>;
     connection?: Strophe.Connection;
 
     constructor(
@@ -80,7 +82,6 @@ export class StropheChatConnectionService implements ChatConnection {
         protected readonly onOnlineSubject: Subject<void>,
         protected readonly onOfflineSubject: Subject<void>,
     ) {
-        this.userJid$ = this.userJidSubject.pipe(filter(jid => jid != null));
     }
 
     addHandler(handler: (stanza: Element) => boolean, identifier?: { ns?: string, name?: string, type?: string, id?: string, from?: string }, options?: { matchBareFromJid: boolean, ignoreNamespaceFragment: boolean }) {

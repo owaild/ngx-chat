@@ -1,4 +1,4 @@
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {first} from 'rxjs/operators';
 import {ChatConnection, ChatPlugin} from 'src/public-api';
 
@@ -13,7 +13,7 @@ export class BlockPlugin implements ChatPlugin {
     nameSpace = nsBlocking;
 
     constructor(
-        private xmppChatAdapter: XmppChatAdapter,
+        private xmppChatAdapter: XmppService,
     ) {
     }
 

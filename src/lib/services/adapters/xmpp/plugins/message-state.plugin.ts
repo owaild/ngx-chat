@@ -5,7 +5,7 @@ import {Direction, Message, MessageState} from '../../../../core/message';
 import {MessageWithBodyStanza, Stanza} from '../../../../core/stanza';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {EntityTimePlugin} from './entity-time.plugin';
 import {MessageUuidPlugin} from './message-uuid.plugin';
 import {MessageReceivedEvent} from './message.plugin';
@@ -39,7 +39,7 @@ export class MessageStatePlugin implements ChatPlugin {
 
     constructor(
         private readonly publishSubscribePlugin: PublishSubscribePlugin,
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
         private readonly chatMessageListRegistry: ChatMessageListRegistryService,
         private readonly logService: LogService,
         private readonly entityTimePlugin: EntityTimePlugin,

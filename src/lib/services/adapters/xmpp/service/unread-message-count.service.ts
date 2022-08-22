@@ -5,7 +5,7 @@ import {Direction, Message} from '../../../../core/message';
 import {Recipient} from '../../../../core/recipient';
 import {findSortedInsertionIndexLast} from '../../../../core/utils-array';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {EntityTimePlugin} from '../plugins/entity-time.plugin';
 import {MultiUserChatPlugin} from '../plugins/multi-user-chat/multi-user-chat.plugin';
 import {PublishSubscribePlugin} from '../plugins/publish-subscribe.plugin';
@@ -41,7 +41,7 @@ export class UnreadMessageCountService {
     private readonly recipientIdToMessageSubscription = new Map<string, Subscription>();
 
     constructor(
-        private chatService: XmppChatAdapter,
+        private chatService: XmppService,
         private chatMessageListRegistry: ChatMessageListRegistryService,
         private publishSubscribePlugin: PublishSubscribePlugin,
         private entityTimePlugin: EntityTimePlugin,

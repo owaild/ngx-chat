@@ -20,7 +20,7 @@ import {RosterListComponent} from './components/roster-list/roster-list.componen
 import {RosterRecipientComponent} from './components/roster-recipient/roster-recipient.component';
 import {IntersectionObserverDirective} from './directives/intersection-observer.directive';
 import {LinksDirective} from './directives/links.directive';
-import {XmppChatAdapter} from './services/adapters/xmpp-chat-adapter.service';
+import {XmppService} from './services/adapters/xmpp.service';
 import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnectionFactory} from './services/adapters/xmpp/interface/chat-connection';
 import {ChatBackgroundNotificationService} from './services/components/chat-background-notification.service';
 import {ChatListStateService} from './services/components/chat-list-state.service';
@@ -30,7 +30,7 @@ import {ContactFactoryService} from './services/adapters/xmpp/service/contact-fa
 import {LogService} from './services/adapters/xmpp/service/log.service';
 import {FILE_UPLOAD_HANDLER_TOKEN} from './hooks/file-upload-handler';
 import {ChatMessageContactComponent} from './components/chat-message-contact/chat-message-contact.component';
-import {StropheChatConnectionFactory} from './services/adapters/xmpp/service/strophe-chat-connection.service';
+import {StropheChatConnectionFactory} from './services/adapters/xmpp/service/strophe-connection.service';
 
 @NgModule({
     imports: [
@@ -117,8 +117,8 @@ export class NgxChatModule {
         httpClient: HttpClient,
         logService: LogService,
         ngZone: NgZone,
-    ): XmppChatAdapter {
-        return new XmppChatAdapter(
+    ): XmppService {
+        return new XmppService(
             logService,
             contactFactory,
             chatConnectionFactory,

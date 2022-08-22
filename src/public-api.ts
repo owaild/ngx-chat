@@ -29,7 +29,7 @@ export * from './lib/directives/links.directive';
 export * from './lib/hooks/chat-contact-click-handler';
 export * from './lib/hooks/file-upload-handler';
 export * from './lib/ngx-chat.module';
-export * from './lib/services/adapters/xmpp-chat-adapter.service';
+export * from './lib/services/adapters/xmpp.service';
 export * from './lib/services/adapters/xmpp/interface/chat-connection';
 export * from './lib/services/adapters/xmpp/shared/xmpp-response.error';
 export * from './lib/services/components/chat-background-notification.service';

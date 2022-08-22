@@ -4,7 +4,7 @@ import {ChatConnection} from '../interface/chat-connection';
 import {ChatPlugin} from '../../../../core/plugin';
 import {Builder} from '../interface/builder';
 import {Subject} from 'rxjs';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 
 export interface SavedConference {
     name: string;
@@ -29,7 +29,7 @@ export class BookmarkPlugin implements ChatPlugin {
 
     private pendingAddConference: Promise<IqResponseStanza<'result'>> | null = null;
 
-    constructor(private readonly chatAdapter: XmppChatAdapter) {
+    constructor(private readonly chatAdapter: XmppService) {
        //chatAdapter.onBeforeOnline$.subscribe(async () => this.bookmarkSubject.next(await this.getBooksMarks()))
     }
 

@@ -5,7 +5,7 @@ import {Direction} from '../../../../../core/message';
 import {IqResponseStanza, Stanza} from '../../../../../core/stanza';
 import {LogService} from '../../service/log.service';
 import {Finder} from '../../shared/finder';
-import {XmppChatAdapter} from '../../../xmpp-chat-adapter.service';
+import {XmppService} from '../../../xmpp.service';
 import {MessageReceivedEvent} from '../message.plugin';
 import {nsDiscoInfo, nsDiscoItems, ServiceDiscoveryPlugin} from '../service-discovery.plugin';
 import {Presence} from '../../../../../core/presence';
@@ -126,7 +126,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     private handlers = {destroy: null, presence: null, message: null};
 
     constructor(
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
         private readonly logService: LogService,
         private readonly serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
     ) {

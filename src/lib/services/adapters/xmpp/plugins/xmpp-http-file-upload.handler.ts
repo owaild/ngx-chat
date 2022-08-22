@@ -1,5 +1,5 @@
 import {HttpClient} from '@angular/common/http';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {Service, ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {FileUploadHandler} from '../../../../hooks/file-upload-handler';
 import {ChatPlugin} from '../../../../core/plugin';
@@ -16,7 +16,7 @@ export class XmppHttpFileUploadHandler implements ChatPlugin, FileUploadHandler 
 
     constructor(
         private readonly httpClient: HttpClient,
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
         private readonly uploadService: Promise<Service>,
     ) {
     }

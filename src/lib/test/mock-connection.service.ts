@@ -3,7 +3,7 @@ import {BehaviorSubject, Subject} from 'rxjs';
 import {LogInRequest} from '../core/log-in-request';
 import {JID} from '@xmpp/jid';
 import {LogService} from '../services/adapters/xmpp/service/log.service';
-import {StropheChatConnectionService} from '../services/adapters/xmpp/service/strophe-chat-connection.service';
+import {StropheConnectionService} from '../services/adapters/xmpp/service/strophe-chat-connection.service';
 import {Injectable} from '@angular/core';
 import {filter} from 'rxjs/operators';
 import {nsDisco, nsDiscoInfo, nsDiscoItems} from '../services/adapters/xmpp/plugins/service-discovery.plugin';
@@ -30,7 +30,7 @@ export class MockChatConnectionFactory implements ChatConnectionFactory {
     }
 }
 
-export class MockConnectionService extends StropheChatConnectionService {
+export class MockConnectionService extends StropheConnectionService {
 
     connection: MockConnection;
 

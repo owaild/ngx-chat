@@ -1,4 +1,4 @@
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {IqResponseStanza} from '../../../../core/stanza';
 import {ChatPlugin} from '../../../../core/plugin';
@@ -13,7 +13,7 @@ export class PushPlugin implements ChatPlugin {
     nameSpace = nsPush;
 
     constructor(
-        private xmppChatAdapter: XmppChatAdapter,
+        private xmppChatAdapter: XmppService,
         private serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
     ) {
     }

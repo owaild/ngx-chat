@@ -2,7 +2,7 @@ import {NgZone} from '@angular/core';
 import {filter} from 'rxjs/operators';
 import {timeout} from '../../../../core/utils-timeout';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {IqResponseStanza} from '../../../../core/stanza';
 import {ChatPlugin} from '../../../../core/plugin';
 import {firstValueFrom} from 'rxjs';
@@ -18,7 +18,7 @@ export class PingPlugin implements ChatPlugin {
     private readonly pingInterval = 60_000;
 
     constructor(
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
         private readonly logService: LogService,
         private readonly ngZone: NgZone,
     ) {

@@ -2,14 +2,14 @@ import {TestBed} from '@angular/core/testing';
 import {testLogService} from '../../../../test/log-service';
 import {ContactFactoryService} from '../service/contact-factory.service';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {CHAT_CONNECTION_FACTORY_TOKEN} from '../interface/chat-connection';
 import {LogInRequest} from '../../../../core/log-in-request';
 import {EjabberdClient} from '../../../../test/ejabberd-client';
 import {CHAT_SERVICE_TOKEN} from '../interface/chat.service';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
 import {HttpBackend, HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
-import {StropheChatConnectionFactory} from '../service/strophe-chat-connection.service';
+import {StropheChatConnectionFactory} from '../service/strophe-connection.service';
 import {jid} from '@xmpp/jid';
 import {firstValueFrom} from 'rxjs';
 
@@ -35,7 +35,7 @@ const bobJID = jid(bobLogin.username + '@' + bobLogin.domain);
 
 describe('roster plugin', () => {
 
-    let chatService: XmppChatAdapter;
+    let chatService: XmppService;
     let client: EjabberdClient;
 
     beforeAll(async () => {
@@ -47,14 +47,14 @@ describe('roster plugin', () => {
                 HttpClient,
                 LogService,
                 {provide: CHAT_CONNECTION_FACTORY_TOKEN, useClass: StropheChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, useClass: XmppChatAdapter},
+                {provide: CHAT_SERVICE_TOKEN, useClass: XmppService},
                 {provide: LogService, useValue: testLogService()},
                 ContactFactoryService,
             ],
             imports: [HttpClientModule]
         });
 
-        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppChatAdapter;
+        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService;
         client = new EjabberdClient();
         await client.cleanUpJabber(domain);
 

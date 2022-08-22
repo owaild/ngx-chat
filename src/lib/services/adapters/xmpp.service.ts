@@ -44,12 +44,12 @@ import {ServiceDiscoveryPlugin} from './xmpp/plugins/service-discovery.plugin';
 import {ChatMessageListRegistryService} from '../components/chat-message-list-registry.service';
 import {HttpClient} from '@angular/common/http';
 import {Invitation} from './xmpp/plugins/multi-user-chat/invitation';
-import {StropheChatConnectionService} from './xmpp/service/strophe-chat-connection.service';
+import {StropheConnectionService} from './xmpp/service/strophe-connection.service';
 import {RoomOccupant} from './xmpp/plugins/multi-user-chat/room-occupant';
 import {RoomCreationOptions} from './xmpp/plugins/multi-user-chat/room-creation-options';
 
 @Injectable()
-export class XmppChatAdapter implements ChatService {
+export class XmppService implements ChatService {
     readonly chatConnectionService: ChatConnection;
 
     readonly message$ = new Subject<Contact>();
@@ -159,9 +159,9 @@ export class XmppChatAdapter implements ChatService {
 
     private lastLogInRequest: LogInRequest;
 
-    private readonly currentLoggedInUserJid$: Observable<string>;
-
     private readonly currentLoggedInUserJidSubject = new BehaviorSubject<string>(null);
+
+    readonly currentLoggedInUserJid$ = this.currentLoggedInUserJidSubject.asObservable();
 
     constructor(
         private logService: LogService,
@@ -181,7 +181,7 @@ export class XmppChatAdapter implements ChatService {
             this.onOfflineSubject
         );
 
-        this.state$ = this.chatConnectionService.stateSubject.asObservable();
+        this.state$ = this.chatConnectionService.state$;
 
         this.state$.subscribe((state) => this.logService.info('state changed to:', state));
 
@@ -228,13 +228,13 @@ export class XmppChatAdapter implements ChatService {
             pubSub: publishSubscribePlugin,
             push: new PushPlugin(this, serviceDiscoveryPlugin),
             roster: new RosterPlugin(this, logService),
-            register: new RegistrationPlugin(logService, this.chatConnectionService as StropheChatConnectionService),
+            register: new RegistrationPlugin(logService, this.chatConnectionService as StropheConnectionService),
             disco: serviceDiscoveryPlugin,
             unreadMessageCount: unreadMessageCountPlugin,
             xmppFileUpload: new XmppHttpFileUploadHandler(httpClient, this, uploadServicePromise),
         };
 
-        this.currentLoggedInUserJid$ = combineLatest([this.chatConnectionService.stateSubject, this.currentLoggedInUserJidSubject])
+        this.currentLoggedInUserJid$ = combineLatest([this.chatConnectionService.state$, this.currentLoggedInUserJidSubject])
             .pipe(filter(([state, jid]) => state === 'online' && jid != null), map(([, jid]) => jid));
         this.onInvitation$ = this.plugins.muc.invitation$;
     }

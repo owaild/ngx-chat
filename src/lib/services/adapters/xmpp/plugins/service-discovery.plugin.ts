@@ -1,6 +1,6 @@
 import {BehaviorSubject, combineLatest, Observable, ReplaySubject} from 'rxjs';
 import {filter, first, map} from 'rxjs/operators';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {ChatPlugin} from '../../../../core/plugin';
 
 export interface Service {
@@ -29,7 +29,7 @@ export class ServiceDiscoveryPlugin implements ChatPlugin {
     private readonly identityToService = new Map<string, Service>();
     private readonly jidToService = new Map<string, Service>();
 
-    constructor(private readonly chatAdapter: XmppChatAdapter) {
+    constructor(private readonly chatAdapter: XmppService) {
 
         // TODO: Change to service/host changed Hook
         chatAdapter.onBeforeOnline$.subscribe(async (jid) => {

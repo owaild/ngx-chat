@@ -18,6 +18,18 @@ export class StropheStanzaBuilder implements Builder {
         return this;
     }
 
+    /**
+     *  Add a child to the current element and make it the new current
+     *  element.
+     *
+     *  This function moves the current element pointer to the child,
+     *  unless text is provided.  If you need to add another child, it
+     *  is necessary to use up() to go back to the parent in the tree.
+     *
+     * @param name
+     * @param attrs
+     * @param text
+     */
     c(name: string, attrs?: Record<string, string>, text?: string): Builder {
         this.stropheBuilder = this.stropheBuilder.c(name, attrs, text);
         return this;

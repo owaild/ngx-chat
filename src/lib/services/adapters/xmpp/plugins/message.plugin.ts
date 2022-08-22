@@ -3,7 +3,7 @@ import {Contact, Invitation} from '../../../../core/contact';
 import {Direction, Message} from '../../../../core/message';
 import {MessageWithBodyStanza, Stanza} from '../../../../core/stanza';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {nsMucUser} from './multi-user-chat/multi-user-chat-constants';
 import {first} from 'rxjs/operators';
 import {ChatPlugin} from '../../../../core/plugin';
@@ -22,7 +22,7 @@ export class MessagePlugin implements ChatPlugin {
     nameSpace = nsConference;
 
     constructor(
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
         private readonly logService: LogService,
     ) {
     }

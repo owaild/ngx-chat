@@ -1,6 +1,6 @@
 import {Direction} from '../../../../core/message';
 import {IqResponseStanza, Stanza} from '../../../../core/stanza';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {MessageReceivedEvent} from './message.plugin';
 import {ChatPlugin} from '../../../../core/plugin';
 import {Finder} from '../shared/finder';
@@ -18,7 +18,7 @@ export class MessageCarbonsPlugin implements ChatPlugin {
 
     nameSpace = nsCarbons;
 
-    constructor(private readonly xmppChatAdapter: XmppChatAdapter) {}
+    constructor(private readonly xmppChatAdapter: XmppService) {}
 
     /**
      * Ask the XMPP server to enable Message Carbons

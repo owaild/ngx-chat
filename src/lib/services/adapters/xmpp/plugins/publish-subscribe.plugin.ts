@@ -1,7 +1,7 @@
 import {Subject} from 'rxjs';
 import {Stanza} from '../../../../core/stanza';
 import {XmppResponseError} from '../shared/xmpp-response.error';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {Form, serializeToSubmitForm} from '../../../../core/form';
 import {Builder} from '../interface/builder';
 import {StanzaHandlerChatPlugin} from '../../../../core/plugin';
@@ -24,7 +24,7 @@ export class PublishSubscribePlugin implements StanzaHandlerChatPlugin {
     private publishHandler: object;
 
     constructor(
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
     ) {
         xmppChatAdapter.onBeforeOnline$.subscribe(async () => this.registerHandler(this.xmppChatAdapter.chatConnectionService));
         xmppChatAdapter.onOffline$.subscribe(async () => this.unregisterHandler(this.xmppChatAdapter.chatConnectionService));

@@ -1,5 +1,5 @@
 import {InjectionToken} from '@angular/core';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
+import {Observable, Subject} from 'rxjs';
 import {LogInRequest} from '../../../../core/log-in-request';
 import {Builder} from './builder';
 import {LogService} from '../service/log.service';
@@ -14,8 +14,8 @@ export const CHAT_CONNECTION_FACTORY_TOKEN = new InjectionToken<ChatConnectionFa
  * @see https://xmpp.org/rfcs/rfc3921.html
  */
 export interface ChatConnection {
-    readonly stateSubject: BehaviorSubject<ConnectionStates>;
-    readonly stanzaUnknown$: Subject<Element>;
+    readonly state$: Observable<ConnectionStates>;
+    readonly stanzaUnknown$: Observable<Element>;
 
     /**
      * User JID with resource, not bare.

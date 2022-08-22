@@ -9,8 +9,7 @@ import {
     LogLevel,
     LogService
 } from '@pazznetwork/ngx-chat';
-import { Subject } from 'rxjs';
-import {Observable} from 'rxjs';
+import {Subject, Observable} from 'rxjs';
 
 @Component({
     selector: 'app-index',
@@ -79,9 +78,9 @@ export class IndexComponent {
                     domain: this.domain,
                 }
             );
-            this.registrationMessageSubject.next( `${this.username} registration was successful`)
+            this.registrationMessageSubject.next(`${this.username} registration was successful`);
         } catch (e) {
-            this.registrationMessageSubject.next( `registration failed: ${e.toString()}`)
+            this.registrationMessageSubject.next(`registration failed: ${e.toString()}`);
             throw e;
         }
     }

@@ -1,15 +1,16 @@
 import {Injectable} from '@angular/core';
 import {client, Client, xml} from '@xmpp/client';
 import {JID} from '@xmpp/jid';
-import {Element as XmppElement} from '@xmpp/xml';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {LogInRequest} from '../../../../core/log-in-request';
 import {LogService} from './log.service';
 import {XmppResponseError} from '../shared/xmpp-response.error';
 import {first} from 'rxjs/operators';
-import {ChatConnection, ChatConnectionFactory } from '../interface/chat-connection';
+import {ChatConnection, ChatConnectionFactory} from '../interface/chat-connection';
 import {toXMLElement, XmppClientStanzaBuilder} from '../xmpp-client-stanza-builder';
 import {ConnectionStates} from '../interface/chat.service';
+
+type xmppElement = ReturnType<typeof xml>;
 
 enum ClientStatus {
     /**
@@ -57,7 +58,7 @@ enum ClientStatus {
 @Injectable()
 export class XmppChatConnectionFactory implements ChatConnectionFactory {
     create(logService: LogService, afterReceiveMessageSubject: Subject<Element>, afterSendMessageSubject: Subject<Element>, beforeSendMessageSubject: Subject<Element>, onBeforeOnlineSubject: Subject<string>, onOfflineSubject: Subject<void>): ChatConnection {
-        return new XmppChatConnectionService(
+        return new XmppjsConnectionService(
             logService,
             afterReceiveMessageSubject,
             afterSendMessageSubject,
@@ -74,15 +75,19 @@ export class XmppChatConnectionFactory implements ChatConnectionFactory {
  * @see https://xmpp.org/rfcs/rfc3920.html
  * @see https://xmpp.org/rfcs/rfc3921.html
  */
-export class XmppChatConnectionService implements ChatConnection {
-
-    public readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
-    public readonly stanzaUnknown$ = new Subject<Element>();
-    public readonly userJid$: Observable<string>;
+export class XmppjsConnectionService implements ChatConnection {
 
     private readonly userJidSubject = new Subject<string>();
+    public readonly userJid$ = this.userJidSubject.asObservable();
+
+    private readonly stanzaUnknownSubject = new Subject<Element>();
+    public readonly stanzaUnknown$ = this.stanzaUnknownSubject.asObservable();
+
+    private readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
+    public readonly state$ = this.stateSubject.asObservable();
+
     private requestId = new Date().getTime();
-    private readonly stanzaResponseHandlers = new Map<string, [(stanza: XmppElement) => void, (e: Error) => void]>();
+    private readonly stanzaResponseHandlers = new Map<string, [(stanza: xmppElement) => void, (e: Error) => void]>();
     private client?: Client;
 
     constructor(
@@ -93,7 +98,6 @@ export class XmppChatConnectionService implements ChatConnection {
         private readonly onBeforeOnlineSubject: Subject<string>,
         private readonly onOfflineSubject: Subject<void>,
     ) {
-        this.userJid$ = this.userJidSubject.asObservable();
     }
 
     public onOnline(jid: JID): void {
@@ -108,11 +112,11 @@ export class XmppChatConnectionService implements ChatConnection {
         this.stanzaResponseHandlers.clear();
     }
 
-    public async send(content: XmppElement): Promise<void> {
+    public async send(content: xmppElement): Promise<void> {
         await this.client.send(content);
     }
 
-    public async sendAwaitingResponse(request: XmppElement): Promise<XmppElement> {
+    public async sendAwaitingResponse(request: xmppElement): Promise<xmppElement> {
         const from = await this.userJid$.pipe(first()).toPromise();
         return new Promise((resolve, reject) => {
             const id = this.getNextRequestId();
@@ -139,7 +143,7 @@ export class XmppChatConnectionService implements ChatConnection {
         });
     }
 
-    public onStanzaReceived(stanza: XmppElement): void {
+    public onStanzaReceived(stanza: xmppElement): void {
         let handled = false;
         this.afterReceiveMessageSubject.next(toXMLElement(stanza));
 
@@ -152,7 +156,7 @@ export class XmppChatConnectionService implements ChatConnection {
         }
 
         if (!handled) {
-            this.stanzaUnknown$.next(toXMLElement(stanza));
+            this.stanzaUnknownSubject.next(toXMLElement(stanza));
         }
     }
 
@@ -193,7 +197,7 @@ export class XmppChatConnectionService implements ChatConnection {
             }
         });
 
-        this.client.on('stanza', (stanza: XmppElement) => {
+        this.client.on('stanza', (stanza: xmppElement) => {
             if (this.skipXmppClientResponses(stanza)) {
                 return;
             }
@@ -207,7 +211,7 @@ export class XmppChatConnectionService implements ChatConnection {
      * We should skip our iq handling for the following xmpp/client response:
      * - resource bind on start by https://xmpp.org/rfcs/rfc6120.html#bind
      */
-    private skipXmppClientResponses(stanza: XmppElement) {
+    private skipXmppClientResponses(stanza: xmppElement) {
         const nsBind = 'urn:ietf:params:xml:ns:xmpp-bind';
         return stanza.is('bind', nsBind);
     }
@@ -242,8 +246,8 @@ export class XmppChatConnectionService implements ChatConnection {
     private $build(
         name: string,
         attrs?: Record<string, string>,
-        sendInner = (element: XmppElement) => this.send(element),
-        sendInnerAwaitingResponse = (element: XmppElement) => this.sendAwaitingResponse(element)
+        sendInner = (element: xmppElement) => this.send(element),
+        sendInnerAwaitingResponse = (element: xmppElement) => this.sendAwaitingResponse(element)
     ): XmppClientStanzaBuilder {
         return new XmppClientStanzaBuilder(xml(name, attrs), () => this.getNextRequestId(), sendInner, sendInnerAwaitingResponse);
     }

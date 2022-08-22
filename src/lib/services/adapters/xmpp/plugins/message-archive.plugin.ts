@@ -3,7 +3,7 @@ import {debounceTime, filter} from 'rxjs/operators';
 import {Recipient} from '../../../../core/recipient';
 import {Stanza} from '../../../../core/stanza';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {MultiUserChatPlugin, nsRSM} from './multi-user-chat/multi-user-chat.plugin';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {nsPubSubEvent} from './publish-subscribe.plugin';
@@ -25,7 +25,7 @@ export class MessageArchivePlugin implements ChatPlugin {
     private readonly mamMessageReceived$ = new Subject<void>();
 
     constructor(
-        private readonly chatService: XmppChatAdapter,
+        private readonly chatService: XmppService,
         private readonly serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
         private readonly multiUserChatPlugin: MultiUserChatPlugin,
         private readonly logService: LogService,

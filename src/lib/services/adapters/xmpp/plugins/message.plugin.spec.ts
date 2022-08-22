@@ -7,7 +7,7 @@ import { MockClientFactory } from '../../../../test/mock-connection.service';
 import { CHAT_SERVICE_TOKEN } from '../interface/chat.service';
 import { ContactFactoryService } from '../service/contact-factory.service';
 import { LogService } from '../service/log.service';
-import { XmppChatAdapter } from '../../xmpp-chat-adapter.service';
+import { XmppChatAdapter } from '../../xmpp.service';
 import { ChatConnection } from '../interface/chat-connection';
 import { XmppClientFactoryService } from '../xmpp-client-factory.service';
 import { MessagePlugin, MessageReceivedEvent } from './message.plugin';

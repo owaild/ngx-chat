@@ -3,7 +3,7 @@ import {Component, Inject, Input, OnInit, Optional} from '@angular/core';
 import {Contact} from '../../core/contact';
 import {Direction, Message, MessageState} from '../../core/message';
 import {extractUrls} from '../../core/utils-links';
-import {XmppChatAdapter} from '../../services/adapters/xmpp-chat-adapter.service';
+import {XmppService} from '../../services/adapters/xmpp.service';
 import {ChatContactClickHandler, CONTACT_CLICK_HANDLER_TOKEN} from '../../hooks/chat-contact-click-handler';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 
@@ -51,7 +51,7 @@ export class ChatMessageComponent implements OnInit {
     }
 
     private tryFindImageLink() {
-        if (this.chatService instanceof XmppChatAdapter) {
+        if (this.chatService instanceof XmppService) {
             const candidateUrls = extractUrls(this.message.body);
 
             if (candidateUrls.length === 0) {

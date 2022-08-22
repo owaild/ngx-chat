@@ -3,7 +3,7 @@ import {Presence} from '../../../../core/presence';
 import {PresenceStanza, Stanza} from '../../../../core/stanza';
 import {ContactSubscription} from '../../../../core/subscription';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {ChatPlugin} from '../../../../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 import {Finder} from '../shared/finder';
@@ -42,7 +42,7 @@ export class RosterPlugin implements ChatPlugin {
     private presenceHandler;
 
     constructor(
-        private chatService: XmppChatAdapter,
+        private chatService: XmppService,
         private logService: LogService,
     ) {
     }

@@ -1,7 +1,7 @@
 import {BehaviorSubject, of} from 'rxjs';
 import {catchError, first, map, mergeMap, timeout} from 'rxjs/operators';
 import {LogService} from '../service/log.service';
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {ChatPlugin} from '../../../../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
@@ -26,7 +26,7 @@ export class EntityTimePlugin implements ChatPlugin {
     private serverTime$ = new BehaviorSubject<TimeReference | null>(null);
 
     constructor(
-        private xmppChatAdapter: XmppChatAdapter,
+        private xmppChatAdapter: XmppService,
         private serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
         private logService: LogService,
     ) {

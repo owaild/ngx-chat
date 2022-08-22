@@ -1,4 +1,4 @@
-import {XmppChatAdapter} from '../../xmpp-chat-adapter.service';
+import {XmppService} from '../../xmpp.service';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {ChatPlugin} from '../../../../core/plugin';
 import {first} from 'rxjs/operators';
@@ -14,7 +14,7 @@ export class MucSubPlugin implements ChatPlugin {
     readonly nameSpace = nsMucSub;
 
     constructor(
-        private readonly xmppChatAdapter: XmppChatAdapter,
+        private readonly xmppChatAdapter: XmppService,
         private readonly serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
     ) {
     }

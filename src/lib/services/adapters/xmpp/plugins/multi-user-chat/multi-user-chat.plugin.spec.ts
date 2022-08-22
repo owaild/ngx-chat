@@ -5,7 +5,7 @@ import {Direction} from '../../../../../core/message';
 import {testLogService} from '../../../../../test/log-service';
 import {ContactFactoryService} from '../../service/contact-factory.service';
 import {LogService} from '../../service/log.service';
-import {XmppChatAdapter} from '../../../xmpp-chat-adapter.service';
+import {XmppService} from '../../../xmpp.service';
 import {JID, jid} from '@xmpp/jid';
 import {Affiliation} from './affiliation';
 import {Role} from './role';
@@ -15,7 +15,7 @@ import {CHAT_CONNECTION_FACTORY_TOKEN} from '../../interface/chat-connection';
 import {CHAT_SERVICE_TOKEN} from '../../interface/chat.service';
 import {ChatMessageListRegistryService} from '../../../../components/chat-message-list-registry.service';
 import {HttpBackend, HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
-import {StropheChatConnectionFactory} from '../../service/strophe-chat-connection.service';
+import {StropheChatConnectionFactory} from '../../service/strophe-connection.service';
 import {LogInRequest} from '../../../../../core/log-in-request';
 import {EjabberdClient} from 'src/lib/test/ejabberd-client';
 import {firstValueFrom} from 'rxjs';
@@ -52,9 +52,9 @@ function roomIdToJid(id: string): JID {
     return jid(id + '@' + 'conference.' + romeoLogin.domain);
 }
 
-describe('multi user chat plugin', () => {
+fdescribe('multi user chat plugin', () => {
 
-    let chatService: XmppChatAdapter;
+    let chatService: XmppService;
     let client: EjabberdClient;
 
     const createRoomConfig = (roomId: string) => ({
@@ -83,14 +83,14 @@ describe('multi user chat plugin', () => {
                 HttpClient,
                 LogService,
                 {provide: CHAT_CONNECTION_FACTORY_TOKEN, useClass: StropheChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, useClass: XmppChatAdapter},
+                {provide: CHAT_SERVICE_TOKEN, useClass: XmppService},
                 {provide: LogService, useValue: testLogService()},
                 ContactFactoryService,
             ],
             imports: [HttpClientModule]
         });
 
-        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppChatAdapter;
+        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService;
         client = new EjabberdClient();
         await client.cleanUpJabber(domain);
         await client.register(romeoLogin);

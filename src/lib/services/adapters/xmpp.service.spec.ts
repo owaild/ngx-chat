@@ -7,13 +7,13 @@ import {testLogService} from '../../test/log-service';
 import {CHAT_SERVICE_TOKEN} from './xmpp/interface/chat.service';
 import {ContactFactoryService} from './xmpp/service/contact-factory.service';
 import {LogService} from './xmpp/service/log.service';
-import {XmppChatAdapter} from './xmpp-chat-adapter.service';
-import {MockChatConnectionFactory, MockConnectionService} from '../../test/mock-connection.service';
-import {CHAT_CONNECTION_FACTORY_TOKEN} from './xmpp/interface/chat-connection';
+import {XmppService} from './xmpp.service';
+import {MockChatConnectionFactory} from '../../test/mock-connection.service';
+import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnection} from './xmpp/interface/chat-connection';
 
 describe('XmppChatAdapter', () => {
-    let chatService: XmppChatAdapter;
-    let chatConnectionService: MockConnectionService;
+    let chatService: XmppService;
+    let chatConnectionService: ChatConnection;
     let contactFactory;
 
     let contact1: Contact;
@@ -25,14 +25,14 @@ describe('XmppChatAdapter', () => {
         TestBed.configureTestingModule({
             providers: [
                 {provide: CHAT_CONNECTION_FACTORY_TOKEN, use: MockChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, useClass: XmppChatAdapter},
+                {provide: CHAT_SERVICE_TOKEN, useClass: XmppService},
                 {provide: LogService, useValue: logService},
                 ContactFactoryService
             ]
         });
 
         contactFactory = TestBed.inject(ContactFactoryService);
-        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppChatAdapter;
+        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService;
 
         contact1 = contactFactory.createContact('test@example.com', 'jon doe');
         contact2 = contactFactory.createContact('test2@example.com', 'jane dane');
@@ -70,12 +70,6 @@ describe('XmppChatAdapter', () => {
                 expect(contact.messages[0].direction).toEqual(Direction.in);
                 done();
             });
-            chatConnectionService.mockDataReceived(
-                chatConnectionService
-                    .$msg({from: contact1.jidBare.toString(), to: chatConnectionService.userJid.toString()})
-                    .c('body', {}, 'message text')
-                    .tree()
-            );
         });
 
         it('#messages$ should not emit contact on sending messages', async () => {
@@ -97,11 +91,6 @@ describe('XmppChatAdapter', () => {
                 expect(message.direction).toEqual(Direction.in);
                 done();
             });
-            chatConnectionService.mockDataReceived(
-                chatConnectionService
-                    .$msg({from: contact1.jidBare.toString(), to: chatConnectionService.userJid.toString()})
-                    .c('body', {}, 'message text')
-                    .tree());
         });
 
         it('#messages$ in contact should emit on sending messages', (done) => {
@@ -126,12 +115,6 @@ describe('XmppChatAdapter', () => {
                     done();
                 }
             });
-            const sampleMessageStanzaWithId = chatConnectionService
-                .$msg({from: contact1.jidBare.toString(), to: chatConnectionService.userJid.toString()})
-                .c('origin-id', {id: 'id'})
-                .c('body', {}, 'message text').tree();
-            chatConnectionService.mockDataReceived(sampleMessageStanzaWithId);
-            chatConnectionService.mockDataReceived(sampleMessageStanzaWithId);
         });
 
     });
@@ -139,11 +122,7 @@ describe('XmppChatAdapter', () => {
     describe('states', () => {
 
         it('should clear contacts when logging out', async () => {
-            chatService.chatConnectionService.stateSubject.next('online');
-            await chatService.state$.pipe(first(state => state === 'online')).toPromise();
             chatService.contacts$.next([contact1]);
-            chatService.chatConnectionService.stateSubject.next('disconnected');
-            await chatService.state$.pipe(first(state => state === 'disconnected')).toPromise();
             expect(chatService.contacts$.getValue()).toEqual([]);
         });
 
