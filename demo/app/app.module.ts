@@ -23,7 +23,7 @@ import {MucComponent} from './routes/muc/muc.component';
     imports: [
         BrowserModule,
         BrowserAnimationsModule,
-        NgxChatModule.forRoot(),
+        NgxChatModule,
         FormsModule,
         AppRoutingModule,
     ],

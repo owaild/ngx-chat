@@ -6,7 +6,7 @@ import {Strophe} from 'strophe.js';
 import {ChatConnection, ChatConnectionFactory} from '../interface/chat-connection';
 import {StropheStanzaBuilder} from '../strophe-stanza-builder';
 import {StropheConnection} from '../strophe-connection';
-import {filter} from 'rxjs/operators';
+import {filter, shareReplay} from 'rxjs/operators';
 import {XmppResponseError} from '../shared/xmpp-response.error';
 import {ConnectionStates} from '../interface/chat.service';
 
@@ -50,6 +50,15 @@ const errorMessages = {
     [Strophe.Status.CONNTIMEOUT]: 'The connection timed out',
 };
 
+export enum StropheStatusRegister {
+    REGIFAIL = 13,
+    REGISTER = 14,
+    REGISTERED = 15,
+    CONFLICT = 16,
+    NOTACCEPTABLE = 17
+}
+
+
 /**
  * Implementation of the XMPP specification according to RFC 6121.
  * @see https://xmpp.org/rfcs/rfc6121.html
@@ -64,8 +73,8 @@ export class StropheConnectionService implements ChatConnection {
     private readonly stanzaUnknownSubject = new Subject<Element>();
     readonly stanzaUnknown$ = this.stanzaUnknownSubject.asObservable();
 
-    private readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
-    readonly state$ = this.stateSubject.asObservable();
+    protected readonly stateSubject = new BehaviorSubject<ConnectionStates>('disconnected');
+    readonly state$ = this.stateSubject.asObservable().pipe(shareReplay(1));
 
     /**
      * User JID with resource, not bare.
@@ -98,10 +107,11 @@ export class StropheConnectionService implements ChatConnection {
     }
 
     onOnline(jid: JID): void {
+        console.log('ONLINE')
         this.logService.info('online =', 'online as', jid.toString());
         this.userJid = jid;
         this.userJidSubject.next(jid.toString());
-        this.stateSubject.next('online');
+        this.stateSubject.next('online' as ConnectionStates);
         this.onOnlineSubject.next();
     }
 
@@ -134,6 +144,8 @@ export class StropheConnectionService implements ChatConnection {
                 case Strophe.Status.REDIRECT:
                 case Strophe.Status.ATTACHED:
                 case Strophe.Status.CONNECTING:
+                case StropheStatusRegister.REGISTER:
+                case StropheStatusRegister.REGISTERED:
                     break;
                 case Strophe.Status.AUTHENTICATING:
                     break;
@@ -146,6 +158,9 @@ export class StropheConnectionService implements ChatConnection {
                 case Strophe.Status.CONNFAIL:
                 case Strophe.Status.AUTHFAIL:
                 case Strophe.Status.CONNTIMEOUT:
+                case StropheStatusRegister.CONFLICT:
+                case StropheStatusRegister.REGIFAIL:
+                case StropheStatusRegister.NOTACCEPTABLE:
                     this.stateSubject.next('disconnected');
                     this.onOffline();
                     reject(`${errorMessages[status]}, failed with status code: ${status}`);

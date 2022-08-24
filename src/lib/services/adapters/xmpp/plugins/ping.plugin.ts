@@ -1,11 +1,8 @@
-import {NgZone} from '@angular/core';
-import {filter} from 'rxjs/operators';
-import {timeout} from '../../../../core/utils-timeout';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
-import {IqResponseStanza} from '../../../../core/stanza';
 import {ChatPlugin} from '../../../../core/plugin';
-import {firstValueFrom} from 'rxjs';
+import {combineLatest, map, of, tap, timeout, timer} from 'rxjs';
+import {catchError} from 'rxjs/operators';
 
 const nsPing = 'urn:xmpp:ping';
 
@@ -14,52 +11,25 @@ const nsPing = 'urn:xmpp:ping';
  */
 export class PingPlugin implements ChatPlugin {
     nameSpace = nsPing;
-    private timeoutHandle: any;
     private readonly pingInterval = 60_000;
 
     constructor(
         private readonly xmppChatAdapter: XmppService,
         private readonly logService: LogService,
-        private readonly ngZone: NgZone,
     ) {
-        this.xmppChatAdapter.state$.pipe(
-            filter(newState => newState === 'online'),
-        ).subscribe(() => this.schedulePings());
-
-        this.xmppChatAdapter.state$.pipe(
-            filter(newState => newState === 'disconnected'),
-        ).subscribe(() => this.unschedulePings());
+        combineLatest([timer(this.pingInterval), this.xmppChatAdapter.onBeforeOnline$])
+            .pipe(
+                tap(() => this.logService.debug('ping...')),
+                map(async () => {
+                    await this.xmppChatAdapter.chatConnectionService
+                        .$iq({type: 'get'})
+                        .c('ping', {xmlns: this.nameSpace})
+                        .sendAwaitingResponse()
+                    this.logService.debug('... pong');
+                    }
+                ),
+                timeout(10_000),
+                catchError(_ => of(() => this.logService.error('... pong errored,  connection should be online, waiting for browser websocket timeout')))
+            );
     }
-
-    private schedulePings(): void {
-        this.unschedulePings();
-        this.ngZone.runOutsideAngular(() => {
-            this.timeoutHandle = window.setInterval(() => this.ping(), this.pingInterval);
-        });
-    }
-
-    private async ping(): Promise<void> {
-        this.logService.debug('ping...');
-        try {
-            await timeout(this.sendPing(), 10_000);
-            this.logService.debug('... pong');
-        } catch {
-            const state = await firstValueFrom(this.xmppChatAdapter.state$);
-            if (state === 'online') {
-                this.logService.error('... pong errored,  connection should be online, waiting for browser websocket timeout');
-            }
-        }
-    }
-
-    private async sendPing(): Promise<IqResponseStanza<'result'>> {
-        return await this.xmppChatAdapter.chatConnectionService
-            .$iq({type: 'get'})
-            .c('ping', {xmlns: this.nameSpace})
-            .sendAwaitingResponse();
-    }
-
-    private unschedulePings(): void {
-        window.clearInterval(this.timeoutHandle);
-    }
-
 }

@@ -1,7 +1,7 @@
 import {TextFieldModule} from '@angular/cdk/text-field';
 import {CommonModule} from '@angular/common';
-import {HttpClient, HttpClientModule} from '@angular/common/http';
-import {ModuleWithProviders, NgModule, NgZone} from '@angular/core';
+import {HttpClientModule} from '@angular/common/http';
+import {NgModule} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {ChatAvatarComponent} from './components/chat-avatar/chat-avatar.component';
 import {FileDropComponent} from './components/chat-filedrop/file-drop.component';
@@ -20,17 +20,8 @@ import {RosterListComponent} from './components/roster-list/roster-list.componen
 import {RosterRecipientComponent} from './components/roster-recipient/roster-recipient.component';
 import {IntersectionObserverDirective} from './directives/intersection-observer.directive';
 import {LinksDirective} from './directives/links.directive';
-import {XmppService} from './services/adapters/xmpp.service';
-import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnectionFactory} from './services/adapters/xmpp/interface/chat-connection';
-import {ChatBackgroundNotificationService} from './services/components/chat-background-notification.service';
-import {ChatListStateService} from './services/components/chat-list-state.service';
-import {ChatMessageListRegistryService} from './services/components/chat-message-list-registry.service';
-import {CHAT_SERVICE_TOKEN, ChatService} from './services/adapters/xmpp/interface/chat.service';
-import {ContactFactoryService} from './services/adapters/xmpp/service/contact-factory.service';
-import {LogService} from './services/adapters/xmpp/service/log.service';
-import {FILE_UPLOAD_HANDLER_TOKEN} from './hooks/file-upload-handler';
 import {ChatMessageContactComponent} from './components/chat-message-contact/chat-message-contact.component';
-import {StropheChatConnectionFactory} from './services/adapters/xmpp/service/strophe-connection.service';
+import {XmppServiceModule} from './services/adapters/xmpp.service.module';
 
 @NgModule({
     imports: [
@@ -38,6 +29,7 @@ import {StropheChatConnectionFactory} from './services/adapters/xmpp/service/str
         FormsModule,
         HttpClientModule,
         TextFieldModule,
+        XmppServiceModule
     ],
     declarations: [
         ChatComponent,
@@ -66,66 +58,7 @@ import {StropheChatConnectionFactory} from './services/adapters/xmpp/service/str
         ChatMessageSimpleComponent,
         FileDropComponent,
         LinksDirective,
+        XmppServiceModule
     ],
 })
-export class NgxChatModule {
-
-    static forRoot(): ModuleWithProviders<NgxChatModule> {
-
-        return {
-            ngModule: NgxChatModule,
-            providers: [
-                ChatBackgroundNotificationService,
-                ChatListStateService,
-                ChatMessageListRegistryService,
-                ContactFactoryService,
-                LogService,
-                {
-                    provide: CHAT_CONNECTION_FACTORY_TOKEN,
-                    useClass: StropheChatConnectionFactory,
-                },
-                {
-                    provide: CHAT_SERVICE_TOKEN,
-                    deps: [
-                        CHAT_CONNECTION_FACTORY_TOKEN,
-                        ChatMessageListRegistryService,
-                        ContactFactoryService,
-                        HttpClient,
-                        LogService,
-                        NgZone,
-                    ],
-                    useFactory: NgxChatModule.xmppChatAdapter,
-                },
-                {
-                    provide: FILE_UPLOAD_HANDLER_TOKEN,
-                    deps: [CHAT_SERVICE_TOKEN],
-                    useFactory: NgxChatModule.fileUploadHandlerFactory,
-                },
-            ],
-        };
-
-    }
-
-    private static fileUploadHandlerFactory(chatService: ChatService) {
-        return chatService.fileUploadHandler;
-    }
-
-    private static xmppChatAdapter(
-        chatConnectionFactory: ChatConnectionFactory,
-        chatMessageListRegistryService: ChatMessageListRegistryService,
-        contactFactory: ContactFactoryService,
-        httpClient: HttpClient,
-        logService: LogService,
-        ngZone: NgZone,
-    ): XmppService {
-        return new XmppService(
-            logService,
-            contactFactory,
-            chatConnectionFactory,
-            chatMessageListRegistryService,
-            ngZone,
-            httpClient
-        );
-    }
-
-}
+export class NgxChatModule {}

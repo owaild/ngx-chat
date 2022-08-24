@@ -1,17 +1,9 @@
-import {TestBed} from '@angular/core/testing';
-import {testLogService} from '../../../../test/log-service';
-import {ContactFactoryService} from '../service/contact-factory.service';
-import {LogService} from '../service/log.service';
-import {XmppService} from '../../xmpp.service';
-import {CHAT_CONNECTION_FACTORY_TOKEN} from '../interface/chat-connection';
 import {LogInRequest} from '../../../../core/log-in-request';
-import {EjabberdClient} from '../../../../test/ejabberd-client';
-import {CHAT_SERVICE_TOKEN} from '../interface/chat.service';
-import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
-import {HttpBackend, HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
-import {StropheChatConnectionFactory} from '../service/strophe-connection.service';
 import {jid} from '@xmpp/jid';
 import {firstValueFrom} from 'rxjs';
+import {XmppServiceModule} from '../../xmpp.service.module';
+import {XmppService} from '../../xmpp.service';
+import {EjabberdClient} from '../../../../test/ejabberd-client';
 
 const domain = 'local-jabber.entenhausen.pazz.de';
 const service = 'wss://' + domain + ':5280/websocket';
@@ -33,29 +25,15 @@ const bobLogin: LogInRequest = {
 const timJID = jid(timLogin.username + '@' + timLogin.domain);
 const bobJID = jid(bobLogin.username + '@' + bobLogin.domain);
 
-describe('roster plugin', () => {
+fdescribe('roster plugin', () => {
 
     let chatService: XmppService;
     let client: EjabberdClient;
 
     beforeAll(async () => {
-        TestBed.configureTestingModule({
-            providers: [
-                ChatMessageListRegistryService,
-                ContactFactoryService,
-                {provide: HttpHandler, useClass: HttpBackend},
-                HttpClient,
-                LogService,
-                {provide: CHAT_CONNECTION_FACTORY_TOKEN, useClass: StropheChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, useClass: XmppService},
-                {provide: LogService, useValue: testLogService()},
-                ContactFactoryService,
-            ],
-            imports: [HttpClientModule]
-        });
-
-        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService;
-        client = new EjabberdClient();
+        const {xmppService, ejabberdClient} = XmppServiceModule.configureTestingModule();
+        chatService = xmppService;
+        client = ejabberdClient;
         await client.cleanUpJabber(domain);
 
         await client.register(bobLogin);
@@ -63,7 +41,7 @@ describe('roster plugin', () => {
     });
 
     afterAll(async () => {
-        await client.cleanUpJabber(domain);
+        // await client.cleanUpJabber(domain);
     })
 
 

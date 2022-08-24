@@ -1,4 +1,4 @@
-import {Subject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {debounceTime, filter} from 'rxjs/operators';
 import {Recipient} from '../../../../core/recipient';
 import {Stanza} from '../../../../core/stanza';
@@ -10,6 +10,7 @@ import {nsPubSubEvent} from './publish-subscribe.plugin';
 import {MessagePlugin} from './message.plugin';
 import {Form, serializeToSubmitForm} from '../../../../core/form';
 import {ChatPlugin} from '../../../../core/plugin';
+import {Contact} from '../../../../core/contact';
 import {Finder} from '../shared/finder';
 import {MUC_SUB_EVENT_TYPE} from './multi-user-chat/muc-sub-event-type';
 
@@ -28,8 +29,9 @@ export class MessageArchivePlugin implements ChatPlugin {
         private readonly chatService: XmppService,
         private readonly serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
         private readonly multiUserChatPlugin: MultiUserChatPlugin,
-        private readonly logService: LogService,
         private readonly messagePlugin: MessagePlugin,
+        private readonly contactsSubject: BehaviorSubject<Contact[]>,
+        private readonly logService: LogService,
     ) {
         this.chatService.state$
             .pipe(filter(state => state === 'online'))
@@ -38,7 +40,7 @@ export class MessageArchivePlugin implements ChatPlugin {
         // emit contacts to refresh contact list after receiving mam messages
         this.mamMessageReceived$
             .pipe(debounceTime(10))
-            .subscribe(() => this.chatService.contacts$.next(this.chatService.contacts$.getValue()));
+            .subscribe(() => this.contactsSubject.next(this.contactsSubject.getValue()));
     }
 
     private async requestNewestMessages(): Promise<void> {

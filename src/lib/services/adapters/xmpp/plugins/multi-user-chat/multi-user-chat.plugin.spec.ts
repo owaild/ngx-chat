@@ -1,24 +1,16 @@
-import {TestBed} from '@angular/core/testing';
 import {jid as parseJid} from '@xmpp/client';
 import {filter, first, map} from 'rxjs/operators';
 import {Direction} from '../../../../../core/message';
-import {testLogService} from '../../../../../test/log-service';
-import {ContactFactoryService} from '../../service/contact-factory.service';
-import {LogService} from '../../service/log.service';
-import {XmppService} from '../../../xmpp.service';
 import {JID, jid} from '@xmpp/jid';
 import {Affiliation} from './affiliation';
 import {Role} from './role';
 import {OccupantNickChange} from './occupant-change';
 import {Invitation} from './invitation';
-import {CHAT_CONNECTION_FACTORY_TOKEN} from '../../interface/chat-connection';
-import {CHAT_SERVICE_TOKEN} from '../../interface/chat.service';
-import {ChatMessageListRegistryService} from '../../../../components/chat-message-list-registry.service';
-import {HttpBackend, HttpClient, HttpClientModule, HttpHandler} from '@angular/common/http';
-import {StropheChatConnectionFactory} from '../../service/strophe-connection.service';
 import {LogInRequest} from '../../../../../core/log-in-request';
-import {EjabberdClient} from 'src/lib/test/ejabberd-client';
 import {firstValueFrom} from 'rxjs';
+import {XmppServiceModule} from '../../../xmpp.service.module';
+import {XmppService} from '../../../xmpp.service';
+import {EjabberdClient} from '../../../../../test/ejabberd-client';
 
 const domain = 'local-jabber.entenhausen.pazz.de';
 const service = 'wss://' + domain + ':5280/websocket';
@@ -52,7 +44,7 @@ function roomIdToJid(id: string): JID {
     return jid(id + '@' + 'conference.' + romeoLogin.domain);
 }
 
-fdescribe('multi user chat plugin', () => {
+describe('multi user chat plugin', () => {
 
     let chatService: XmppService;
     let client: EjabberdClient;
@@ -75,23 +67,10 @@ fdescribe('multi user chat plugin', () => {
     const currentRoomCount = async () => await firstValueFrom(chatService.rooms$.pipe(map(arr => arr.length)));
 
     beforeAll(async () => {
-        TestBed.configureTestingModule({
-            providers: [
-                ChatMessageListRegistryService,
-                ContactFactoryService,
-                {provide: HttpHandler, useClass: HttpBackend},
-                HttpClient,
-                LogService,
-                {provide: CHAT_CONNECTION_FACTORY_TOKEN, useClass: StropheChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, useClass: XmppService},
-                {provide: LogService, useValue: testLogService()},
-                ContactFactoryService,
-            ],
-            imports: [HttpClientModule]
-        });
+        const {xmppService, ejabberdClient} = XmppServiceModule.configureTestingModule();
+        chatService = xmppService;
+        client = ejabberdClient;
 
-        chatService = TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService;
-        client = new EjabberdClient();
         await client.cleanUpJabber(domain);
         await client.register(romeoLogin);
         await client.register(juliaLogin);

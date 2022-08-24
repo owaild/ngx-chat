@@ -4,11 +4,11 @@ import {PresenceStanza, Stanza} from '../../../../core/stanza';
 import {ContactSubscription} from '../../../../core/subscription';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
-import {ChatPlugin} from '../../../../core/plugin';
+import {StanzaHandlerChatPlugin} from '../../../../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 import {Finder} from '../shared/finder';
 import {nsMuc} from './multi-user-chat/multi-user-chat-constants';
-import {firstValueFrom, Subject} from 'rxjs';
+import {BehaviorSubject, firstValueFrom, Subject} from 'rxjs';
 
 /**
  * Current @TODOS:
@@ -25,7 +25,7 @@ export const nsRosterX = 'jabber:x:roster';
 /**
  * https://xmpp.org/rfcs/rfc6121.html#roster-add-success
  */
-export class RosterPlugin implements ChatPlugin {
+export class RosterPlugin implements StanzaHandlerChatPlugin {
 
     readonly nameSpace = nsRoster;
 
@@ -42,9 +42,18 @@ export class RosterPlugin implements ChatPlugin {
     private presenceHandler;
 
     constructor(
-        private chatService: XmppService,
-        private logService: LogService,
+        private readonly chatService: XmppService,
+        private readonly contactsSubject: BehaviorSubject<Contact[]>,
+        private readonly logService: LogService,
     ) {
+        chatService.onBeforeOnline$.subscribe(async () => {
+            await this.registerHandler(this.chatService.chatConnectionService);
+            await this.onBeforeOnline()
+        });
+        chatService.onOffline$.subscribe(async () => {
+            await this.unregisterHandler(this.chatService.chatConnectionService);
+            this.contactsSubject.next([]);
+        });
     }
 
     async registerHandler(connection: ChatConnection): Promise<void> {
@@ -77,6 +86,8 @@ export class RosterPlugin implements ChatPlugin {
     }
 
     private handleRosterPushStanza(stanza: Stanza, currentUser: string) {
+        console.log('handleRosterPushStanza: Stanza=', stanza )
+        console.log('handleRosterPushStanza: currentUser=', currentUser )
         const itemChild = Finder.create(stanza).searchByTag('query').searchByTag('item').result;
         const to = itemChild.getAttribute('jid');
         const id = itemChild.getAttribute('id');
@@ -125,12 +136,13 @@ export class RosterPlugin implements ChatPlugin {
     }
 
     private refreshContacts(): true {
-        const existingContacts = this.chatService.contacts$.getValue();
-        this.chatService.contacts$.next(existingContacts);
+        const existingContacts = this.contactsSubject.getValue();
+        this.contactsSubject.next(existingContacts);
         return true;
     }
 
     private handlePresenceStanza(stanza: PresenceStanza, userJid: string): boolean {
+        console.log('handlePresenceStanza: Stanza=', stanza )
         const type = stanza.getAttribute('type');
 
         if (type === 'error') {
@@ -181,12 +193,12 @@ export class RosterPlugin implements ChatPlugin {
                 this.authorizePresenceSubscriptionSubject.next(fromJid);
                 fromContact.subscription$.next(
                     this.transitionSubscriptionRequestReceivedAccepted(fromContact.subscription$.getValue()));
-                this.chatService.contacts$.next(this.chatService.contacts$.getValue());
+                this.contactsSubject.next(this.contactsSubject.getValue());
                 return true;
             } else if (fromContact) {
                 // subscriber is known but not subscribed or pending
                 fromContact.pendingIn$.next(true);
-                this.chatService.contacts$.next(this.chatService.contacts$.getValue());
+                this.contactsSubject.next(this.contactsSubject.getValue());
                 return true;
             }
         }
@@ -194,7 +206,7 @@ export class RosterPlugin implements ChatPlugin {
         if (type === 'subscribed') {
             fromContact.pendingOut$.next(false);
             fromContact.subscription$.next(this.transitionSubscriptionRequestSentAccepted(fromContact.subscription$.getValue()));
-            this.chatService.contacts$.next(this.chatService.contacts$.getValue());
+            this.contactsSubject.next(this.contactsSubject.getValue());
             this.acknowledgeSubscribeSubject.next(fromJid);
             return true;
         }
@@ -254,6 +266,7 @@ export class RosterPlugin implements ChatPlugin {
             .$iq({type: 'get'})
             .c('query', {xmlns: 'jabber:iq:roster'})
             .sendAwaitingResponse();
+        console.log('ROOSTER CONTACTS STANZA, ', responseStanza);
         return this.convertToContacts(responseStanza);
     }
 
@@ -359,6 +372,7 @@ export class RosterPlugin implements ChatPlugin {
     }
 
     private handleRosterXPush(elem: Element): boolean {
+        console.log('handleRosterXPush: elem=', elem);
         const items = Array.from(elem.querySelectorAll('item')).filter(item => item.getAttribute('action') === 'add');
         for (const item of items) {
             this.addContactFromRosterXPushSubject.next(item.getAttribute('jid'));

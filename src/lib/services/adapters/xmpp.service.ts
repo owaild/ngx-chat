@@ -56,7 +56,8 @@ export class XmppService implements ChatService {
     readonly groupMessage$ = new Subject<Room>();
     readonly messageSent$: Subject<Contact> = new Subject();
 
-    readonly contacts$ = new BehaviorSubject<Contact[]>([]);
+    private readonly contactsSubject = new BehaviorSubject<Contact[]>([]);
+    readonly contacts$ = this.contactsSubject.asObservable();
     readonly contactCreated$ = new Subject<Contact>();
 
     readonly blockedContactJids$ = new BehaviorSubject<Set<string>>(new Set<string>());
@@ -191,7 +192,7 @@ export class XmppService implements ChatService {
             // re-emit contacts when sending or receiving a message to refresh contact groups
             // if the sending contact was in 'other', he still is in other now, but passes the 'messages.length > 0' predicate, so that
             // he should be seen now.
-            this.contacts$.next(this.contacts$.getValue());
+            this.contactsSubject.next(this.contactsSubject.getValue());
         });
 
         this.afterReceiveMessage$ = this.afterReceiveMessageSubject.asObservable();
@@ -201,7 +202,7 @@ export class XmppService implements ChatService {
         this.onOnline$ = this.onOnlineSubject.asObservable();
         this.onOffline$ = this.onOfflineSubject.asObservable();
 
-        this.onOffline$.subscribe(() => this.contacts$.next([]));
+        this.onOffline$.subscribe(() => this.contactsSubject.next([]));
 
         const serviceDiscoveryPlugin = new ServiceDiscoveryPlugin(this);
         const publishSubscribePlugin = new PublishSubscribePlugin(this);
@@ -219,15 +220,15 @@ export class XmppService implements ChatService {
             entityCapabilities: new EntityCapabilitiesPlugin(this),
             entityTime: entityTimePlugin,
             message: messagePlugin,
-            mam: new MessageArchivePlugin(this, serviceDiscoveryPlugin, multiUserChatPlugin, logService, messagePlugin),
+            mam: new MessageArchivePlugin(this, serviceDiscoveryPlugin, multiUserChatPlugin, messagePlugin, this.contactsSubject, logService),
             messageCarbon: new MessageCarbonsPlugin(this),
             messageState: new MessageStatePlugin(publishSubscribePlugin, this, chatMessageListRegistryService, logService, entityTimePlugin),
             messageUuid: new MessageUuidPlugin(),
             mucSub: new MucSubPlugin(this, serviceDiscoveryPlugin),
-            ping: new PingPlugin(this, logService, ngZone),
+            ping: new PingPlugin(this, logService),
             pubSub: publishSubscribePlugin,
             push: new PushPlugin(this, serviceDiscoveryPlugin),
-            roster: new RosterPlugin(this, logService),
+            roster: new RosterPlugin(this, this.contactsSubject, logService),
             register: new RegistrationPlugin(logService, this.chatConnectionService as StropheConnectionService),
             disco: serviceDiscoveryPlugin,
             unreadMessageCount: unreadMessageCountPlugin,
@@ -296,7 +297,7 @@ export class XmppService implements ChatService {
 
     getContactByIdSync(jidPlain: string): Contact {
         const bareJidToFind = parseJid(jidPlain).bare();
-        return this.contacts$.getValue().find(contact => contact.jidBare.equals(bareJidToFind));
+        return this.contactsSubject.getValue().find(contact => contact.jidBare.equals(bareJidToFind));
     }
 
     async getOrCreateContactById(jidPlain: string, name?: string): Promise<Contact> {
@@ -307,14 +308,19 @@ export class XmppService implements ChatService {
         let contact = this.getContactByIdSync(jidPlain);
         if (!contact) {
             contact = this.contactFactory.createContact(parseJid(jidPlain).bare().toString(), name);
-            this.contacts$.next([contact, ...this.contacts$.getValue()]);
+            this.contactsSubject.next([contact, ...this.contactsSubject.getValue()]);
             this.contactCreated$.next(contact);
         }
         return contact;
     }
 
-    async addContact(jid: string) {
+    async addContact(jid: string, name?: string, avatar?: string) {
+        if (!name) {
+            name = jid;
+        }
+        const contact = new Contact(jid, name, this.logService, avatar);
         await this.plugins.roster.addRosterContact(jid);
+        this.contactsSubject.next([contact].concat(this.contactsSubject.getValue()))
     }
 
     async removeContact(jid: string) {

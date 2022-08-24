@@ -13,7 +13,7 @@ import {
     ViewChild,
     ViewChildren,
 } from '@angular/core';
-import {Observable, Subject} from 'rxjs';
+import {firstValueFrom, Observable, Subject} from 'rxjs';
 import {debounceTime, filter, takeUntil} from 'rxjs/operators';
 import {Direction, Message} from '../../core/message';
 import {Recipient} from '../../core/recipient';
@@ -151,7 +151,7 @@ export class ChatMessageListComponent implements OnInit, OnDestroy, OnChanges, A
         }
     }
 
-    getOrCreateContactWithFullJid(message: Message | RoomMessage): Contact {
+    async getOrCreateContactWithFullJid(message: Message | RoomMessage): Promise<Contact> {
         if (this.recipient.recipientType === 'contact') {
             // this is not a multi user chat, just use recipient as contact
             return this.recipient;
@@ -159,13 +159,11 @@ export class ChatMessageListComponent implements OnInit, OnDestroy, OnChanges, A
 
         const roomMessage = message as RoomMessage;
 
-        let matchingContact = this.chatService.contacts$.getValue().find(
-            contact => contact.jidFull.equals(roomMessage.from),
-        );
+        const contacts = await firstValueFrom(this.chatService.contacts$);
+        let matchingContact = contacts.find(contact => contact.jidFull.equals(roomMessage.from));
 
         if (!matchingContact) {
-            matchingContact = this.contactFactory.createContact(roomMessage.from.toString(), roomMessage.from.resource);
-            this.chatService.contacts$.next([matchingContact].concat(this.chatService.contacts$.getValue()));
+            await this.chatService.addContact(roomMessage.from.toString(), roomMessage.from.resource);
         }
 
         return matchingContact;
@@ -190,7 +188,7 @@ export class ChatMessageListComponent implements OnInit, OnDestroy, OnChanges, A
         await this.chatService.declineRoomInvite(this.pendingRoomInvite.roomJid);
         (this.recipient as Contact).pendingRoomInvite$.next(null);
         this.pendingRoomInvite = null;
-        this.chatService.removeContact(this.recipient.jidBare.toString());
+        await this.chatService.removeContact(this.recipient.jidBare.toString());
     }
 
     private scrollToLastMessage() {

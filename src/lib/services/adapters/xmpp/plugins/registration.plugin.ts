@@ -1,18 +1,11 @@
 import {LogService} from '../service/log.service';
-import {getConnectionsUrls, StropheConnectionService} from '../service/strophe-connection.service';
+import {getConnectionsUrls, StropheConnectionService, StropheStatusRegister} from '../service/strophe-connection.service';
 import {StropheConnection} from '../strophe-connection';
 import {Strophe} from 'strophe.js';
 
 const nsXForm = 'jabber:x:data'; // currently generic registration forms are not implemented
 const nsRegister = 'jabber:iq:register';
 
-enum StropheRegisterStatus {
-    REGIFAIL = 13,
-    REGISTER = 14,
-    REGISTERED = 15,
-    CONFLICT = 16,
-    NOTACCEPTABLE = 17
-}
 
 /**
  * XEP-0077: In-Band Registration
@@ -125,12 +118,12 @@ export class RegistrationPlugin {
             conn._addSysHandler((stanza) => {
                 const query = stanza.getElementsByTagName('query');
                 if (query.length !== 1) {
-                    conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
+                    conn._changeConnectStatus(StropheStatusRegister.REGIFAIL, 'unknown');
                     reject('registration failed by unknown reason');
                     return false;
                 }
 
-                conn._changeConnectStatus(StropheRegisterStatus.REGISTER, null);
+                conn._changeConnectStatus(StropheStatusRegister.REGISTER, null);
 
                 resolve();
                 return false;
@@ -148,7 +141,7 @@ export class RegistrationPlugin {
                 if (stanza.getAttribute('type') === 'error') {
                     error = stanza.getElementsByTagName('error');
                     if (error.length !== 1) {
-                        conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL, 'unknown');
+                        conn._changeConnectStatus(StropheStatusRegister.REGIFAIL, 'unknown');
                         reject();
                         return false;
                     }
@@ -156,17 +149,17 @@ export class RegistrationPlugin {
                     // this is either 'conflict' or 'not-acceptable'
                     error = error[0].firstChild.tagName.toLowerCase();
                     if (error === 'conflict') {
-                        conn._changeConnectStatus(StropheRegisterStatus.CONFLICT, error);
+                        conn._changeConnectStatus(StropheStatusRegister.CONFLICT, error);
                         reject();
                     } else if (error === 'not-acceptable') {
-                        conn._changeConnectStatus(StropheRegisterStatus.NOTACCEPTABLE, error);
+                        conn._changeConnectStatus(StropheStatusRegister.NOTACCEPTABLE, error);
                         reject();
                     } else {
-                        conn._changeConnectStatus(StropheRegisterStatus.REGIFAIL, error);
+                        conn._changeConnectStatus(StropheStatusRegister.REGIFAIL, error);
                         reject();
                     }
                 } else {
-                    conn._changeConnectStatus(StropheRegisterStatus.REGISTERED, null);
+                    conn._changeConnectStatus(StropheStatusRegister.REGISTERED, null);
                     resolve();
                 }
 

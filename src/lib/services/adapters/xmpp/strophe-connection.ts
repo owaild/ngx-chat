@@ -356,8 +356,9 @@ export class StropheConnection extends Strophe.Connection {
      * @method Connnection.connect
      * @param { String } jid userId@domain.tld/resources
      * @param { String } password
+     * @param callback for handling the connection status changes
      */
-    async connect(jid: string, password: string) {
+    async connect(jid: string, password: string, callback = this.onConnectStatusChanged.bind(this)) {
         if (this.settings.discoverConnectionMethods) {
             const domain = Strophe.getDomainFromJid(jid);
             await this.discoverConnectionMethods(domain);
@@ -366,7 +367,7 @@ export class StropheConnection extends Strophe.Connection {
             throw new Error('You must supply a value for either the bosh_service_url or websocket_url or both.');
         }
         const boshWait = 59;
-        super.connect(jid, password, this.onConnectStatusChanged.bind(this), boshWait);
+        super.connect(jid, password, callback, boshWait);
     }
 
     /**
@@ -558,6 +559,7 @@ export class StropheConnection extends Strophe.Connection {
         [Strophe.Status.REDIRECT]: 'REDIRECT',
     };
 
+    // TODO: Ensure can be replaced by strophe-connection.service then delete
     /**
      * Callback method called by Strophe as the Connection goes
      * through various states while establishing or tearing down a

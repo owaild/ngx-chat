@@ -96,7 +96,7 @@ export interface ChatService {
      * A BehaviorSubject of all known contacts. Contains for example Contacts that sent you a message or blocked contacts.
      * This does not represent your roster list.
      */
-    contacts$: BehaviorSubject<Contact[]>;
+    contacts$: Observable<Contact[]>;
 
     /**
      * Emits when a new contact was added to the roster / contact list
@@ -214,7 +214,7 @@ export interface ChatService {
      * Adds the given contact to the user roster. Will send a subscription request to the contact.
      * @param jid The ID of the contact.
      */
-    addContact(jid: string): Promise<void>;
+    addContact(jid: string, name?: string, avatar?: string): Promise<void>;
 
     /**
      * Removes the given contact from the user roster. Will cancel a presence subscription from the user to the contact and will retract

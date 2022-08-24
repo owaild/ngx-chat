@@ -1,34 +1,23 @@
-import {TestBed} from '@angular/core/testing';
 import {Client} from '@xmpp/client';
-import {testLogService} from '../../../../test/log-service';
-import {MockChatConnectionFactory, MockConnectionService} from '../../../../test/mock-connection.service';
-import {ContactFactoryService} from '../service/contact-factory.service';
-import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
-import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnection} from '../interface/chat-connection';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
-import {CHAT_SERVICE_TOKEN} from '../interface/chat.service';
+import {XmppServiceModule} from '../../xmpp.service.module';
+import {EjabberdClient} from '../../../../test/ejabberd-client';
 
 describe('service discovery plugin', () => {
 
-    let chatAdapter: XmppService;
+    let chatService: XmppService;
+    let client: EjabberdClient;
     let serviceDiscoveryPlugin: ServiceDiscoveryPlugin;
     let xmppClientMock: jasmine.SpyObj<Client>;
 
     beforeEach(() => {
-        TestBed.configureTestingModule({
-            providers: [
-                {provide: CHAT_CONNECTION_FACTORY_TOKEN, use: MockChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, use: XmppService},
-                {provide: LogService, useValue: testLogService()},
-                ContactFactoryService
-            ]
-        });
+        const {xmppService, ejabberdClient} = XmppServiceModule.configureTestingModule();
+        chatService = xmppService;
+        client = ejabberdClient;
 
         // chatConnectionService.client = xmppClientMock;
         // chatConnectionService.userJid = parseJid('me', 'jabber.example.com', 'something');
-
-        chatAdapter = TestBed.inject(XmppService);
     });
 
     it('should discover the multi user chat service', async () => {

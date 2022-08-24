@@ -4,17 +4,19 @@
 
     <ng-container *ngFor="let dateMessagesGroup of recipient.dateMessagesGroups">
         <div class="chat-messages-date-group">{{dateMessagesGroup.date | date:chatService.translations.dateFormat:undefined:chatService.translations.locale}}</div>
+        <ng-container  *ngFor="let message of dateMessagesGroup.messages">
         <ngx-chat-message
-                *ngFor="let message of dateMessagesGroup.messages"
+                *ngIf="getOrCreateContactWithFullJid(message) | async as contact"
                 [id]="'message-' + message.id"
                 [class.chat-message--in]="message.direction === Direction.in"
                 [class.chat-message--out]="message.direction === Direction.out"
-                [contact]="getOrCreateContactWithFullJid(message)"
-                [nick]="message.direction === Direction.in ? getOrCreateContactWithFullJid(message).name : ''"
-                [avatar]="getOrCreateContactWithFullJid(message).avatar"
+                [contact]="contact"
+                [nick]="message.direction === Direction.in ? contact.name : ''"
+                [avatar]="contact.avatar"
                 [message]="message"
                 [showAvatars]="showAvatars">
         </ngx-chat-message>
+        </ng-container>
     </ng-container>
 
     <div class="chat-messages-empty" *ngIf="recipient.messages.length === 0">
