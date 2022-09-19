@@ -1,19 +1,20 @@
-import { Component, Inject, Input, OnDestroy, OnInit, Optional, ViewChild } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
-import { filter, takeUntil } from 'rxjs/operators';
-import { Direction, Message } from '../../core/message';
-import { ChatContactClickHandler, CONTACT_CLICK_HANDLER_TOKEN } from '../../hooks/chat-contact-click-handler';
-import { ChatListStateService, ChatWindowState } from '../../services/components/chat-list-state.service';
-import { CHAT_SERVICE_TOKEN, ChatService, ChatAction } from '../../services/adapters/xmpp/interface/chat.service';
-import { ChatMessageInputComponent } from '../chat-message-input/chat-message-input.component';
-import { ChatMessageListComponent } from '../chat-message-list/chat-message-list.component';
-import { FILE_UPLOAD_HANDLER_TOKEN, FileUploadHandler } from '../../hooks/file-upload-handler';
-import { RoomMessage } from '../../services/adapters/xmpp/plugins/multi-user-chat/room-message';
+import {ChangeDetectionStrategy, Component, Inject, Input, OnDestroy, OnInit, Optional, ViewChild} from '@angular/core';
+import {Observable, Subject} from 'rxjs';
+import {filter, takeUntil} from 'rxjs/operators';
+import {Direction, Message} from '../../core/message';
+import {ChatContactClickHandler, CONTACT_CLICK_HANDLER_TOKEN} from '../../hooks/chat-contact-click-handler';
+import {ChatListStateService, ChatWindowState} from '../../services/components/chat-list-state.service';
+import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
+import {ChatMessageInputComponent} from '../chat-message-input/chat-message-input.component';
+import {ChatMessageListComponent} from '../chat-message-list/chat-message-list.component';
+import {FILE_UPLOAD_HANDLER_TOKEN, FileUploadHandler} from '../../hooks/file-upload-handler';
+import {RoomMessage} from '../../services/adapters/xmpp/plugins/multi-user-chat/room-message';
 
 @Component({
     selector: 'ngx-chat-window',
     templateUrl: './chat-window.component.html',
     styleUrls: ['./chat-window.component.less'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatWindowComponent implements OnInit, OnDestroy {
 
@@ -61,8 +62,8 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
         this.chatListService.closeChat(this.chatWindowState.recipient);
     }
 
-    sendMessage() {
-        this.messageInput.onSendMessage();
+    async sendMessage() {
+        await this.messageInput.onSendMessage();
     }
 
     afterSendMessage() {
@@ -71,18 +72,11 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
 
     async uploadFile(file: File) {
         const url = await this.fileUploadHandler.upload(file);
-        this.chatService.sendMessage(this.chatWindowState.recipient, url);
+        await this.chatService.sendMessage(this.chatWindowState.recipient, url);
     }
 
     onFocus() {
         this.messageInput.focus();
-    }
-
-    onActionClick(chatAction: ChatAction) {
-        chatAction.onClick({
-            contact: this.chatWindowState.recipient.jidBare.toString(),
-            chatWindow: this,
-        });
     }
 
     onContactClick($event: MouseEvent) {

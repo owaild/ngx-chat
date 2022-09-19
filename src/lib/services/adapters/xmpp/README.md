@@ -36,6 +36,14 @@ There is always the case of the user writing without sending a contact request w
 
 ### Messaging
 
+In the core specification messages arrive to a user only when he is online and only to the specific client and specific device and are only kept in one session.
+For managing offline messages and the message history the Message Archive Management shorted to MAM was added.
+
+When a server supports this feature 
+
+Other Message Features other Chat Clients offer and are in specification process:
+- Time
+
 
 ### Connection Management
 

@@ -1,4 +1,4 @@
-import {Component, ElementRef, EventEmitter, Inject, Input, OnInit, Output, ViewChild} from '@angular/core';
+import {Component, ElementRef, EventEmitter, Inject, Input, Output, ViewChild} from '@angular/core';
 import {Recipient} from '../../core/recipient';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 
@@ -23,10 +23,12 @@ export class ChatMessageInputComponent {
     constructor(@Inject(CHAT_SERVICE_TOKEN) public chatService: ChatService) {
     }
 
-    async onSendMessage($event?: KeyboardEvent) {
-        if ($event) {
-            $event.preventDefault();
-        }
+    async onKeydownEnter($event: KeyboardEvent) {
+        $event?.preventDefault();
+        await this.onSendMessage();
+    }
+
+    async onSendMessage() {
         await this.chatService.sendMessage(this.recipient, this.message);
         this.message = '';
         this.messageSent.emit();

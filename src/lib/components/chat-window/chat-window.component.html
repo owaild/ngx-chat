@@ -40,19 +40,12 @@
         <div (click)="onFocus()">
             <ngx-chat-message-list
                     [recipient]="chatWindowState.recipient"
-                    [showAvatars]="false"></ngx-chat-message-list>
-            <div class="chat-input-container">
-                <ngx-chat-message-input
-                        [recipient]="chatWindowState.recipient"
-                        (messageSent)="afterSendMessage()"
-                ></ngx-chat-message-input>
-                <div *ngFor="let action of chatService.chatActions"
-                     (click)="onActionClick(action)"
-                     class="chat-action"
-                     [ngClass]="action.cssClass"
-                     [innerHTML]="action.html">
-                </div>
-            </div>
+                    [showAvatars]="false">
+            </ngx-chat-message-list>
+            <ngx-chat-message-input
+                    [recipient]="chatWindowState.recipient"
+                    (messageSent)="afterSendMessage()">
+            </ngx-chat-message-input>
         </div>
     </ngx-chat-filedrop>
 

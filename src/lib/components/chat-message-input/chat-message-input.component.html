@@ -1,9 +1,15 @@
-<textarea class="chat-input"
+<div class="chat-input-container">
+    <textarea class="chat-input"
           data-name="chat-input"
           #chatInput
           [(ngModel)]="message"
-          (keydown.enter)="onSendMessage($event)"
+          (keydown.enter)="onKeydownEnter($event)"
           cdkTextareaAutosize
           cdkAutosizeMinRows="1"
           cdkAutosizeMaxRows="5"
-          placeholder="{{chatService.translations.placeholder}}"></textarea>
+          placeholder="{{chatService.translations.placeholder}}">
+    </textarea>
+    <div class="chat-action chat-window-send"
+         (click)="onSendMessage()"
+    >&raquo;</div>
+</div>

@@ -14,26 +14,6 @@ import {Invitation} from '../plugins/multi-user-chat/invitation';
 import {RoomCreationOptions} from '../plugins/multi-user-chat/room-creation-options';
 import {RoomOccupant} from '../plugins/multi-user-chat/room-occupant';
 
-
-export interface ChatAction {
-    /**
-     * to identify actions
-     */
-    id: string;
-    cssClass: { [className: string]: boolean } | string | string[];
-    html: string;
-
-    onClick(chatActionContext: ChatActionContext): void;
-}
-
-
-export interface ChatActionContext {
-    contact: string;
-    chatWindow: {
-        sendMessage?: () => void;
-    };
-}
-
 export type JidToNumber = Map<string, number>;
 
 /**
@@ -163,12 +143,6 @@ export interface ChatService {
     translations: Translations;
 
     /**
-     * The actions visible to users near to chat inputs, e.g. the send message button. Customize it for branding or to add
-     * new actions, e.g. for file uploads.
-     */
-    chatActions: ChatAction[];
-
-    /**
      * Observable for plugins to clear up data and manage the message state
      */
     readonly afterReceiveMessage$: Observable<Element>;
@@ -214,7 +188,7 @@ export interface ChatService {
      * Adds the given contact to the user roster. Will send a subscription request to the contact.
      * @param jid The ID of the contact.
      */
-    addContact(jid: string, name?: string, avatar?: string): Promise<void>;
+    addContact(jid: string): Promise<void>;
 
     /**
      * Removes the given contact from the user roster. Will cancel a presence subscription from the user to the contact and will retract
@@ -305,7 +279,7 @@ export interface ChatService {
 
     queryAllRooms(): Promise<Room[]>;
 
-    loadMostRecentUnloadedMessages(recipient: Recipient): void;
+    loadMostRecentUnloadedMessages(recipient: Recipient): Promise<void>;
 
     getContactMessageState(message: Message, contactJid: string): MessageState;
 

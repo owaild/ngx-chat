@@ -46,7 +46,7 @@ export class PublishSubscribePlugin implements StanzaHandlerChatPlugin {
 
     async storePrivatePayloadPersistent(node: string, id: string, createData: (builder: Builder) => Builder): Promise<Element> {
         return await this.xmppChatAdapter.chatConnectionService
-            .$iq()
+            .$iq({type: 'set'})
             .c('pubsub', {xmlns: nsPubSub})
             .c('publish', {node})
             .c('item', {id})

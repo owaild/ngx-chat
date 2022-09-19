@@ -1,10 +1,9 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { Component, EventEmitter, Inject, Input, OnInit, Output } from '@angular/core';
+import {ChangeDetectionStrategy, Component, EventEmitter, Inject, Input, OnInit, Output} from '@angular/core';
 import { combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Contact } from '../../core/contact';
 import { Recipient } from '../../core/recipient';
-import { MultiUserChatPlugin } from '../../services/adapters/xmpp/plugins/multi-user-chat/multi-user-chat.plugin';
 import { ChatListStateService } from '../../services/components/chat-list-state.service';
 import { CHAT_SERVICE_TOKEN, ChatService } from '../../services/adapters/xmpp/interface/chat.service';
 
@@ -34,6 +33,7 @@ import { CHAT_SERVICE_TOKEN, ChatService } from '../../services/adapters/xmpp/in
             transition('shown => hidden', animate('400ms ease')),
         ]),
     ],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RosterListComponent implements OnInit {
 

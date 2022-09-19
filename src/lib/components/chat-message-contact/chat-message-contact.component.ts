@@ -1,6 +1,6 @@
 import {Component, Inject, Input, OnDestroy, OnInit, Optional, Output,} from '@angular/core';
 import {combineLatest, Observable, Subject} from 'rxjs';
-import {filter, takeUntil} from 'rxjs/operators';
+import {takeUntil} from 'rxjs/operators';
 import {Direction} from '../../core/message';
 import {ChatListStateService} from '../../services/components/chat-list-state.service';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
@@ -89,17 +89,17 @@ export class ChatMessageContactComponent implements OnInit, OnDestroy {
         }
     }
 
-    blockContact($event: MouseEvent) {
+    async blockContact($event: MouseEvent) {
         $event.preventDefault();
-        this.chatService.blockJid(this.contact.jidBare.toString());
+        await this.chatService.blockJid(this.contact.jidBare.toString());
         this.chatListService.closeChat(this.contact);
         this.subscriptionAction = SubscriptionAction.NO_PENDING_REQUEST;
     }
 
-    blockContactAndReport($event: MouseEvent) {
+    async blockContactAndReport($event: MouseEvent) {
         $event.preventDefault();
         this.reportUserService.reportUser(this.contact);
-        this.blockContact($event);
+        await this.blockContact($event);
     }
 
     dismissBlockOptions($event: MouseEvent) {

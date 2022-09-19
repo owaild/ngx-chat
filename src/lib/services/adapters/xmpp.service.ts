@@ -11,12 +11,7 @@ import {Message, MessageState} from '../../core/message';
 import {Form} from '../../core/form';
 import {Translations} from '../../core/translations';
 import {defaultTranslations} from '../../core/translations-default';
-import {
-    ChatActionContext,
-    ChatService,
-    ConnectionStates,
-    JidToNumber,
-} from './xmpp/interface/chat.service';
+import {ChatService, ConnectionStates, JidToNumber,} from './xmpp/interface/chat.service';
 import {ContactFactoryService} from './xmpp/service/contact-factory.service';
 import {LogService} from './xmpp/service/log.service';
 import {MessageArchivePlugin} from './xmpp/plugins/message-archive.plugin';
@@ -129,15 +124,6 @@ export class XmppService implements ChatService {
     readonly userAvatar$ = new BehaviorSubject(dummyAvatarContact);
     translations: Translations = defaultTranslations();
 
-    chatActions = [{
-        id: 'sendMessage',
-        cssClass: 'chat-window-send',
-        html: '&raquo;',
-        onClick: (chatActionContext: ChatActionContext) => {
-            chatActionContext.chatWindow.sendMessage();
-        },
-    }];
-
     supportsPlugin = {block: true, messageState: true,};
 
     get fileUploadHandler(): FileUploadHandler {
@@ -181,7 +167,6 @@ export class XmppService implements ChatService {
             this.onOnlineSubject,
             this.onOfflineSubject
         );
-
         this.state$ = this.chatConnectionService.state$;
 
         this.state$.subscribe((state) => this.logService.info('state changed to:', state));
@@ -292,35 +277,32 @@ export class XmppService implements ChatService {
     }
 
     async getContactById(jidPlain: string): Promise<Contact> {
-        return Promise.resolve(this.getContactByIdSync(jidPlain));
-    }
-
-    getContactByIdSync(jidPlain: string): Contact {
         const bareJidToFind = parseJid(jidPlain).bare();
-        return this.contactsSubject.getValue().find(contact => contact.jidBare.equals(bareJidToFind));
+        const contacts = await firstValueFrom(this.contacts$);
+        return contacts.find(contact => contact.jidBare.equals(bareJidToFind));
     }
 
     async getOrCreateContactById(jidPlain: string, name?: string): Promise<Contact> {
-        return Promise.resolve(this.getOrCreateContactByIdSync(jidPlain, name));
-    }
-
-    getOrCreateContactByIdSync(jidPlain: string, name?: string): Contact {
-        let contact = this.getContactByIdSync(jidPlain);
+        const contacts = await firstValueFrom(this.contacts$);
+        let contact = await this.getContactById(jidPlain);
         if (!contact) {
+            console.log('NEW CONTACT IN LIST');
             contact = this.contactFactory.createContact(parseJid(jidPlain).bare().toString(), name);
-            this.contactsSubject.next([contact, ...this.contactsSubject.getValue()]);
+            console.log('CONTACTS WILL BE ', [contact.name, ...contacts.map((c) => c.name)]);
+            this.contactsSubject.next([contact, ...contacts]);
             this.contactCreated$.next(contact);
         }
         return contact;
     }
 
-    async addContact(jid: string, name?: string, avatar?: string) {
-        if (!name) {
-            name = jid;
+    async addContact(jid: string) {
+        console.log('ADD CONTACT')
+        const contact = await this.getContactById(jid);
+
+        console.log('AddContact. contact ', contact?.name)
+        if (!contact || !contact.isSubscribed()) {
+            await this.plugins.roster.addRosterContact(jid);
         }
-        const contact = new Contact(jid, name, this.logService, avatar);
-        await this.plugins.roster.addRosterContact(jid);
-        this.contactsSubject.next([contact].concat(this.contactsSubject.getValue()))
     }
 
     async removeContact(jid: string) {
@@ -343,7 +325,7 @@ export class XmppService implements ChatService {
         await this.chatConnectionService.logOut();
         this.currentLoggedInUserJidSubject.next(null);
         await firstValueFrom(this.onOffline$);
-        console.log('OFFLINE FIRED')
+        console.log('OFFLINE FIRED');
     }
 
     async sendMessage(recipient: Recipient, body: string) {
