@@ -5,7 +5,6 @@ import {ChatService} from '../../../src/lib/services/adapters/xmpp/interface/cha
 @Component({
     selector: 'app-iq',
     templateUrl: './iq.component.html',
-    styleUrls: ['./iq.component.css']
 })
 export class IqComponent {
     iqRequest: string;

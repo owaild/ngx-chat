@@ -32,6 +32,7 @@
                     *ngFor="let contact of (contacts | async)"
                     [recipient]="contact"
                     (click)="onClickRecipient(contact)">
+                <ngx-chat-roster-recipient-presence [contact]="contact"></ngx-chat-roster-recipient-presence>
             </ngx-chat-roster-recipient>
 
         </div>
@@ -117,9 +118,4 @@
         </p>
         <p class="roster-debug-state">state: {{chatService.state$ | async}}</p>
     </ng-container>
-
-    <!--
-    <div class="roster-footer">
-    </div>
-    -->
 </div>

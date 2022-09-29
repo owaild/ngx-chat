@@ -48,7 +48,7 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
     ) {
         chatService.onBeforeOnline$.subscribe(async () => {
             await this.registerHandler(this.chatService.chatConnectionService);
-            await this.onBeforeOnline()
+            await this.onBeforeOnline();
         });
         chatService.onOffline$.subscribe(async () => {
             await this.unregisterHandler(this.chatService.chatConnectionService);
@@ -59,7 +59,11 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
     async registerHandler(connection: ChatConnection): Promise<void> {
         const from = await firstValueFrom(this.chatService.chatConnectionService.userJid$);
 
-        this.authorizePresenceSubscriptionSubject.subscribe(async (jid) => await this.authorizePresenceSubscription(jid));
+        this.authorizePresenceSubscriptionSubject.subscribe(async (jid) => {
+            await this.authorizePresenceSubscription(jid);
+            const contact = await this.chatService.getOrCreateContactById(jid);
+            contact.pendingIn$.next(false);
+        });
 
         this.acknowledgeRosterStanzaPushSubject.subscribe(async (id) =>
             await this.chatService.chatConnectionService
@@ -86,14 +90,10 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
     }
 
     private handleRosterPushStanza(stanza: Stanza, currentUser: string) {
-        console.log('handleRosterPushStanza: Stanza=', stanza )
-        console.log('handleRosterPushStanza: currentUser=', currentUser )
-        const itemChild = Finder.create(stanza).searchByTag('query').searchByTag('item').result;
-        const to = itemChild.getAttribute('jid');
-        const id = itemChild.getAttribute('id');
-        const name = itemChild.getAttribute('name');
-        const ask = itemChild.getAttribute('ask');
-        const from = itemChild.getAttribute('from');
+        console.log('handleRosterPushStanza: Stanza=', stanza);
+        console.log('handleRosterPushStanza: currentUser=', currentUser);
+        const rosterItem = Finder.create(stanza).searchByTag('query').searchByTag('item').result;
+        const from = rosterItem.getAttribute('from');
 
         if (currentUser !== from) {
             // Security Warning: Traditionally, a roster push included no 'from' address, with the result that all roster pushes were sent
@@ -106,43 +106,46 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
             return true;
         }
 
-        const subscription = itemChild.getAttribute('subscription');
-        const contact = this.chatService.getOrCreateContactByIdSync(to, name || to);
-        contact.pendingOut$.next(ask === 'subscribe');
-        const subscriptionStatus = subscription || 'none';
+        const id = rosterItem.getAttribute('id');
 
         // acknowledge the reception of the pushed roster stanza
         this.acknowledgeRosterStanzaPushSubject.next(id);
 
+        let handled = false;
+        this.rosterItemToContact(stanza).then(() => {
+
+            // TODO: Should be unnecessary already done in xmpp.service.getOrCreateContactById
+            // const existingContacts = this.contactsSubject.getValue();
+            // this.contactsSubject.next(existingContacts);
+            handled = true;
+        });
+
+
+        return handled;
+    }
+
+    private async rosterItemToContact(rosterItem: Stanza) {
+        const to = rosterItem.getAttribute('jid');
+        const name = rosterItem.getAttribute('name');
+        const ask = rosterItem.getAttribute('ask');
+
+        const subscription = rosterItem.getAttribute('subscription');
+        const contact = await this.chatService.getOrCreateContactById(to, name || to);
+        contact.pendingOut$.next(ask === 'subscribe');
+        const subscriptionStatus = subscription || 'none';
+        const contactSubscription = this.parseSubscription(subscriptionStatus);
+
         if (subscriptionStatus === 'remove') {
             contact.pendingOut$.next(false);
             contact.subscription$.next(ContactSubscription.none);
-            return this.refreshContacts();
-        } else if (subscriptionStatus === 'none') {
-            contact.subscription$.next(ContactSubscription.none);
-            return this.refreshContacts();
-        } else if (subscriptionStatus === 'to') {
-            contact.subscription$.next(ContactSubscription.to);
-            return this.refreshContacts();
-        } else if (subscriptionStatus === 'from') {
-            contact.subscription$.next(ContactSubscription.from);
-            return this.refreshContacts();
-        } else if (subscriptionStatus === 'both') {
-            contact.subscription$.next(ContactSubscription.both);
-            return this.refreshContacts();
+        } else {
+            contact.subscription$.next(contactSubscription);
         }
-
-        return false;
-    }
-
-    private refreshContacts(): true {
-        const existingContacts = this.contactsSubject.getValue();
-        this.contactsSubject.next(existingContacts);
-        return true;
+        return contact;
     }
 
     private handlePresenceStanza(stanza: PresenceStanza, userJid: string): boolean {
-        console.log('handlePresenceStanza: Stanza=', stanza )
+        console.log('handlePresenceStanza: Stanza=', stanza);
         const type = stanza.getAttribute('type');
 
         if (type === 'error') {
@@ -159,64 +162,73 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
         if (stanzaFinder.searchByTag('query').searchByNamespace(nsMuc).result) {
             return false;
         }
+        let handled = false;
+        this.chatService.getOrCreateContactById(fromJid).then(fromContact => {
+            const statusMessage = stanzaFinder.searchByTag('status')?.result?.textContent;
 
-        const fromContact = this.chatService.getOrCreateContactByIdSync(fromJid);
-        const statusMessage = stanzaFinder.searchByTag('status')?.result?.textContent;
-
-        if (statusMessage) {
-            fromContact.setStatus(statusMessage);
-        }
-
-        if (!type) {
-            // https://xmpp.org/rfcs/rfc3921.html#stanzas-presence-children-show
-            const show = stanzaFinder.searchByTag('show').result.textContent;
-            const presenceMapping: { [key: string]: Presence } = {
-                chat: Presence.present,
-                null: Presence.present,
-                away: Presence.away,
-                dnd: Presence.away,
-                xa: Presence.away,
-            };
-            fromContact.updateResourcePresence(fromJid, presenceMapping[show]);
-            return true;
-        }
-
-        if (type === 'unavailable') {
-            fromContact.updateResourcePresence(fromJid, Presence.unavailable);
-            return true;
-        }
-
-        if (type === 'subscribe') {
-            if (fromContact.isSubscribed() || fromContact.pendingOut$.getValue()) {
-                // subscriber is already a contact of us, approve subscription
-                fromContact.pendingIn$.next(false);
-                this.authorizePresenceSubscriptionSubject.next(fromJid);
-                fromContact.subscription$.next(
-                    this.transitionSubscriptionRequestReceivedAccepted(fromContact.subscription$.getValue()));
-                this.contactsSubject.next(this.contactsSubject.getValue());
-                return true;
-            } else if (fromContact) {
-                // subscriber is known but not subscribed or pending
-                fromContact.pendingIn$.next(true);
-                this.contactsSubject.next(this.contactsSubject.getValue());
-                return true;
+            if (statusMessage) {
+                fromContact.setStatus(statusMessage);
             }
-        }
 
-        if (type === 'subscribed') {
-            fromContact.pendingOut$.next(false);
-            fromContact.subscription$.next(this.transitionSubscriptionRequestSentAccepted(fromContact.subscription$.getValue()));
-            this.contactsSubject.next(this.contactsSubject.getValue());
-            this.acknowledgeSubscribeSubject.next(fromJid);
-            return true;
-        }
+            if (!type) {
+                // https://xmpp.org/rfcs/rfc3921.html#stanzas-presence-children-show
+                const show = stanzaFinder.searchByTag('show').result.textContent;
+                const presenceMapping: { [key: string]: Presence } = {
+                    chat: Presence.present,
+                    null: Presence.present,
+                    away: Presence.away,
+                    dnd: Presence.away,
+                    xa: Presence.away,
+                };
+                fromContact.updateResourcePresence(fromJid, presenceMapping[show]);
+                handled = true;
+                return;
+            }
 
-        if (type === 'unsubscribed') {
-            this.acknowledgeUnsubscribeSubject.next(fromJid);
-            return true;
-        }
-        // do nothing on true and for false we didn't handle the stanza properly
-        return type === 'unsubscribe';
+            if (type === 'unavailable') {
+                fromContact.updateResourcePresence(fromJid, Presence.unavailable);
+                handled = true;
+                return;
+            }
+
+            if (type === 'subscribe') {
+                if (fromContact.isSubscribed() || fromContact.pendingOut$.getValue()) {
+                    // subscriber is already a contact of us, approve subscription
+                    fromContact.pendingIn$.next(false);
+                    this.authorizePresenceSubscriptionSubject.next(fromJid);
+                    fromContact.subscription$.next(
+                        this.transitionSubscriptionRequestReceivedAccepted(fromContact.subscription$.getValue()));
+                    handled = true;
+                    return;
+                } else if (fromContact) {
+                    // subscriber is known but not subscribed or pending
+                    fromContact.pendingIn$.next(true);
+                    this.contactsSubject.next(this.contactsSubject.getValue());
+                    handled = true;
+                    return;
+                }
+            }
+
+            if (type === 'subscribed') {
+                fromContact.pendingOut$.next(false);
+                fromContact.subscription$.next(this.transitionSubscriptionRequestSentAccepted(fromContact.subscription$.getValue()));
+                this.contactsSubject.next(this.contactsSubject.getValue());
+                this.acknowledgeSubscribeSubject.next(fromJid);
+                handled = true;
+                return;
+            }
+
+            if (type === 'unsubscribed') {
+                this.acknowledgeUnsubscribeSubject.next(fromJid);
+                handled = true;
+                return;
+            }
+            // do nothing on true and for false we didn't handle the stanza properly
+            handled = type === 'unsubscribe';
+            return;
+        });
+
+        return handled;
     }
 
     private transitionSubscriptionRequestReceivedAccepted(subscription: ContactSubscription) {
@@ -241,24 +253,14 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
         }
     }
 
-    private async unauthorizePresenceSubscription(jid: string) {
-        const contact = this.chatService.getOrCreateContactByIdSync(jid);
-        contact.pendingIn$.next(false);
-        await this.chatService.chatConnectionService
-            .$pres({to: jid, type: 'unsubscribed'})
-            .send();
-    }
-
     private async authorizePresenceSubscription(jid: string) {
-        const contact = this.chatService.getOrCreateContactByIdSync(jid);
-        contact.pendingIn$.next(false);
         await this.chatService.chatConnectionService
             .$pres({to: jid, type: 'subscribed'})
             .send();
     }
 
-    public onBeforeOnline(): PromiseLike<any> {
-        return this.refreshRosterContacts();
+    public async onBeforeOnline(): Promise<void> {
+        await this.refreshRosterContacts();
     }
 
     async getRosterContacts(): Promise<Contact[]> {
@@ -266,19 +268,15 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
             .$iq({type: 'get'})
             .c('query', {xmlns: 'jabber:iq:roster'})
             .sendAwaitingResponse();
-        console.log('ROOSTER CONTACTS STANZA, ', responseStanza);
-        return this.convertToContacts(responseStanza);
-    }
 
-    private convertToContacts(responseStanza: Element): Contact[] {
-        return Array.from(responseStanza.querySelector('query').children)
-            .map(rosterElement => {
-                const contact = this.chatService.getOrCreateContactByIdSync(rosterElement.getAttribute('jid'),
-                    rosterElement.getAttribute('name') || rosterElement.getAttribute('jid'));
-                contact.subscription$.next(this.parseSubscription(rosterElement.getAttribute('subscription')));
-                contact.pendingOut$.next(rosterElement.getAttribute('ask') === 'subscribe');
-                return contact;
-            });
+        return await Promise.all(
+            Finder
+                .create(responseStanza)
+                .searchByTag('query')
+                .searchByTag('item')
+                .results
+                .map(rosterItem => this.rosterItemToContact(rosterItem)));
+
     }
 
     private parseSubscription(subscription: string): ContactSubscription {
@@ -290,8 +288,9 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
             case 'both':
                 return ContactSubscription.both;
             case 'none':
-            default:
                 return ContactSubscription.none;
+            default:
+                throw new Error(`Unhandled subscription value: ${subscription}`);
         }
     }
 
@@ -299,6 +298,8 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
         await this.authorizePresenceSubscription(jid);
         await this.sendAddToRoster(jid);
         await this.sendSubscribeToPresence(jid);
+        const contact = await this.chatService.getOrCreateContactById(jid);
+        contact.pendingIn$.next(false);
     }
 
     private async sendAddToRoster(jid: string) {
@@ -316,13 +317,15 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
     }
 
     async removeRosterContact(jid: string): Promise<void> {
-        const contact = this.chatService.getContactByIdSync(jid);
+        const contact = await this.chatService.getContactById(jid);
         if (contact) {
             contact.subscription$.next(ContactSubscription.none);
             contact.pendingOut$.next(false);
             contact.pendingIn$.next(false);
             await this.sendRemoveFromRoster(jid);
-            await this.sendWithdrawPresenceSubscription(jid);
+            await this.unauthorizePresenceSubscription(jid);
+            const contacts = await firstValueFrom(this.contactsSubject);
+            this.contactsSubject.next(contacts.filter(c => c.jid.toString() === jid));
         }
     }
 
@@ -334,7 +337,7 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
             .send();
     }
 
-    private async sendWithdrawPresenceSubscription(jid: string) {
+    private async unauthorizePresenceSubscription(jid: string) {
         await this.chatService.chatConnectionService
             .$pres({to: jid, type: 'unsubscribed'})
             .send();
@@ -367,8 +370,9 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
             .send();
     }
 
-    refreshRosterContacts() {
-        return this.getRosterContacts();
+    async refreshRosterContacts(): Promise<void> {
+        console.log('REFRESH CONTACTS');
+        this.contactsSubject.next(await this.getRosterContacts());
     }
 
     private handleRosterXPush(elem: Element): boolean {

@@ -133,6 +133,13 @@ export class StropheConnectionService implements ChatConnection {
                 this.afterReceiveMessageSubject.next(el);
                 return true;
             }, null, 'message');
+
+            this.connection.addHandler((el) => {
+                console.log( '<--IN')
+                console.dirxml(el);
+                console.log('-->')
+                return true;
+            });
         });
     }
 
@@ -211,6 +218,9 @@ export class StropheConnectionService implements ChatConnection {
             'iq',
             attrs,
             async (el: Element) => {
+                console.log( '<--OUT')
+                console.dirxml(el);
+                console.log('-->')
                 this.connection.sendIQ(el);
             },
             async (el: Element) => new Promise<Element>((resolve, reject) => this.connection.sendIQ(el, resolve, (el) => reject(XmppResponseError.create(el))))
@@ -220,12 +230,18 @@ export class StropheConnectionService implements ChatConnection {
     $msg(attrs?: Record<string, string>): StropheStanzaBuilder {
         const sendInner = async (el: Element) => {
             this.beforeSendMessageSubject.next(el);
+            console.log( '<--OUT')
+            console.dirxml(el);
+            console.log('-->')
             this.connection.send(el);
             this.afterSendMessageSubject.next(el);
         };
 
         const sendInnerAwaitingResponse = async (el: Element) => {
             this.beforeSendMessageSubject.next(el);
+            console.log( '<--OUT')
+            console.dirxml(el);
+            console.log('-->')
             this.connection.send(el);
             this.afterSendMessageSubject.next(el);
             return Promise.resolve(el);
@@ -239,9 +255,17 @@ export class StropheConnectionService implements ChatConnection {
             'presence',
             attrs,
             async (el: Element) => {
+                console.log( '<--OUT')
+                console.dirxml(el);
+                console.log('-->')
                 this.connection.sendPresence(el);
             },
-            async (el: Element) => new Promise<Element>((resolve, reject) => this.connection.sendPresence(el, resolve, (el) => reject(XmppResponseError.create(el))))
+            async (el: Element) => new Promise<Element>((resolve, reject) => {
+                console.log( '<--OUT')
+                console.dirxml(el);
+                console.log('-->')
+                this.connection.sendPresence(el, resolve, (el) => reject(XmppResponseError.create(el)));
+            })
         );
     }
 }

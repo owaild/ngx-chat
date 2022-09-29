@@ -1,9 +1,8 @@
-import { Component, Inject, Input, OnInit } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
-import { Presence } from '../../core/presence';
-import { Recipient } from '../../core/recipient';
-import { CHAT_SERVICE_TOKEN, ChatService } from '../../services/adapters/xmpp/interface/chat.service';
+import {Component, Inject, Input, OnInit} from '@angular/core';
+import {Observable} from 'rxjs';
+import {debounceTime, distinctUntilChanged, map} from 'rxjs/operators';
+import {Recipient} from '../../core/recipient';
+import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 
 @Component({
     selector: 'ngx-chat-roster-recipient',
@@ -16,22 +15,17 @@ export class RosterRecipientComponent implements OnInit {
     recipient: Recipient;
 
     unreadCount$: Observable<number>;
-    presence$: Observable<Presence> | null;
 
-    Presence = Presence;
-
-    constructor(
-        @Inject(CHAT_SERVICE_TOKEN) private chatService: ChatService,
-    ) {}
+    constructor(@Inject(CHAT_SERVICE_TOKEN) private chatService: ChatService) {
+    }
 
     ngOnInit() {
         this.unreadCount$ = this.chatService.jidToUnreadCount$
             .pipe(
-                map(jidToUnreadCount => jidToUnreadCount.get(this.recipient.jidBare.toString()) || 0),
+                map(jidToUnreadCount => jidToUnreadCount.get(this.recipient.jid.toString()) || 0),
                 distinctUntilChanged(),
                 debounceTime(20),
             );
-        this.presence$ = this.recipient.recipientType === 'contact' ? this.recipient.presence$ : of(Presence.unavailable);
     }
 
 }

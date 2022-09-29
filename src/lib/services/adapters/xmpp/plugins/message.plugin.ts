@@ -1,12 +1,13 @@
 import {jid as parseJid} from '@xmpp/client';
 import {Contact, Invitation} from '../../../../core/contact';
-import {Direction, Message} from '../../../../core/message';
+import {Direction, Message, MessageState} from '../../../../core/message';
 import {MessageWithBodyStanza, Stanza} from '../../../../core/stanza';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
 import {nsMucUser} from './multi-user-chat/multi-user-chat-constants';
-import {first} from 'rxjs/operators';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin, StanzaHandlerChatPlugin} from '../../../../core/plugin';
+import {firstValueFrom, Subject} from 'rxjs';
+import {ChatConnection} from '../interface/chat-connection';
 
 export class MessageReceivedEvent {
     discard = false;
@@ -18,27 +19,43 @@ const nsConference = 'jabber:x:conference';
  * Part of the XMPP Core Specification
  * see: https://datatracker.ietf.org/doc/rfc6120/
  */
-export class MessagePlugin implements ChatPlugin {
+export class MessagePlugin implements StanzaHandlerChatPlugin {
     nameSpace = nsConference;
 
+    private messageHandler: object;
+
+    private messageStanzaSubject = new Subject<Stanza>();
+
     constructor(
-        private readonly xmppChatAdapter: XmppService,
+        private readonly chatService: XmppService,
         private readonly logService: LogService,
     ) {
+        this.chatService.onBeforeOnline$.subscribe(async () => {
+            await this.registerHandler(this.chatService.chatConnectionService);
+        });
+
+        this.chatService.onOffline$.subscribe(async () => {
+            await this.unregisterHandler(this.chatService.chatConnectionService);
+        });
+
+        this.messageStanzaSubject.subscribe(async (stanza) => await this.handleMessageStanza(stanza));
     }
 
-    async registerHandler(stanza: Stanza, archiveDelayElement?: Stanza): Promise<boolean> {
-        if (this.isMessageStanza(stanza)) {
-            await this.handleMessageStanza(stanza, archiveDelayElement);
+    async registerHandler(connection: ChatConnection): Promise<void> {
+        this.messageHandler = connection.addHandler((stanza) => {
+            this.messageStanzaSubject.next(stanza);
             return true;
-        }
-        return false;
+        }, {ns: this.nameSpace, name: 'message', type: 'chat'});
+    }
+
+    async unregisterHandler(connection: ChatConnection): Promise<void> {
+        connection.deleteHandler(this.messageHandler);
     }
 
     async sendMessage(contact: Contact, body: string) {
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
-        const messageBuilder = this.xmppChatAdapter.chatConnectionService
-            .$msg({to: contact.jidBare.toString(), from, type: 'chat'})
+        const from = await firstValueFrom(this.chatService.chatConnectionService.userJid$);
+        const messageBuilder = this.chatService.chatConnectionService
+            .$msg({to: contact.jid.toString(), from, type: 'chat'})
             .c('body')
             .t(body);
 
@@ -48,25 +65,27 @@ export class MessagePlugin implements ChatPlugin {
             datetime: new Date(), // TODO: replace with entity time plugin
             delayed: false,
             fromArchive: false,
+            state: MessageState.SENDING,
         };
+        const messageStanza = messageBuilder.tree();
+        await this.chatService.plugins.messageState.beforeSendMessage(message, messageStanza);
         contact.addMessage(message);
         // TODO: on rejection mark message that it was not sent successfully
         try {
             await messageBuilder.send();
+            await this.chatService.plugins.messageState.afterSendMessage(message, messageStanza);
         } catch (rej) {
             this.logService.error('rejected message ' + message.id, rej);
         }
     }
 
-    private isMessageStanza(stanza: Stanza): stanza is MessageWithBodyStanza {
-        return stanza.nodeName === 'message'
-            && stanza.getAttribute('type') !== 'groupchat'
-            && stanza.getAttribute('type') !== 'error'
-            && !!stanza.querySelector('body').textContent?.trim();
-    }
-
-    private async handleMessageStanza(messageStanza: MessageWithBodyStanza, archiveDelayElement?: Stanza) {
-        const me = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+    /**
+     *
+     * @param messageStanza messageStanza to handle from connection, mam or other message extending plugins
+     * @param archiveDelayElement only provided by MAM
+     */
+    public async handleMessageStanza(messageStanza: MessageWithBodyStanza, archiveDelayElement?: Stanza) {
+        const me = await firstValueFrom(this.chatService.chatConnectionService.userJid$);
         const isAddressedToMe = me === messageStanza.getAttribute('to');
         const messageDirection = isAddressedToMe ? Direction.in : Direction.out;
 
@@ -89,13 +108,15 @@ export class MessagePlugin implements ChatPlugin {
         };
 
         const messageReceivedEvent = new MessageReceivedEvent();
+        //TODO: should be removed after setting the messages into the message list with id.
+        this.chatService.plugins.messageState.afterReceiveMessage(message, messageStanza, messageReceivedEvent);
 
         if (messageReceivedEvent.discard) {
             return;
         }
 
         const contactJid = isAddressedToMe ? messageStanza.getAttribute('from') : messageStanza.getAttribute('to');
-        const contact = this.xmppChatAdapter.getOrCreateContactByIdSync(contactJid);
+        const contact = await this.chatService.getOrCreateContactById(contactJid);
         contact.addMessage(message);
 
         const invites = Array.from(messageStanza.querySelectorAll('x'));
@@ -108,7 +129,7 @@ export class MessagePlugin implements ChatPlugin {
         }
 
         if (messageDirection === Direction.in && !messageFromArchive) {
-            this.xmppChatAdapter.message$.next(contact);
+            this.chatService.message$.next(contact);
         }
     }
 

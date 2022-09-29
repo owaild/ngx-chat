@@ -60,14 +60,14 @@ export class XmppService implements ChatService {
         .pipe(
             map(
                 ([contacts, blockedJids]) =>
-                    contacts.filter(contact => blockedJids.has(contact.jidBare.toString())),
+                    contacts.filter(contact => blockedJids.has(contact.jid.toString())),
             ),
         );
     readonly notBlockedContacts$ = combineLatest([this.contacts$, this.blockedContactJids$])
         .pipe(
             map(
                 ([contacts, blockedJids]) =>
-                    contacts.filter(contact => !blockedJids.has(contact.jidBare.toString())),
+                    contacts.filter(contact => !blockedJids.has(contact.jid.toString())),
             ),
         );
     readonly contactsSubscribed$: Observable<Contact[]> = this.notBlockedContacts$.pipe(
@@ -279,7 +279,7 @@ export class XmppService implements ChatService {
     async getContactById(jidPlain: string): Promise<Contact> {
         const bareJidToFind = parseJid(jidPlain).bare();
         const contacts = await firstValueFrom(this.contacts$);
-        return contacts.find(contact => contact.jidBare.equals(bareJidToFind));
+        return contacts.find(contact => contact.jid.equals(bareJidToFind));
     }
 
     async getOrCreateContactById(jidPlain: string, name?: string): Promise<Contact> {
@@ -335,11 +335,11 @@ export class XmppService implements ChatService {
         }
         switch (recipient.recipientType) {
             case 'room':
-                await this.plugins.muc.sendMessage(recipient, trimmedBody);
+                await this.plugins.muc.sendMessage(recipient as Room, trimmedBody);
                 break;
             case 'contact':
-                await this.plugins.message.sendMessage(recipient, trimmedBody);
-                this.messageSent$.next(recipient);
+                await this.plugins.message.sendMessage(recipient as Contact, trimmedBody);
+                this.messageSent$.next(recipient as Contact);
                 break;
             default:
                 throw new Error('invalid recipient type: ' + (recipient as any)?.recipientType);

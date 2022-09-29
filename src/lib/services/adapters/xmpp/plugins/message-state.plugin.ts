@@ -1,6 +1,6 @@
 import {jid as parseJid} from '@xmpp/client';
 import {JID} from '@xmpp/jid';
-import {filter, first} from 'rxjs/operators';
+import {filter} from 'rxjs/operators';
 import {Direction, Message, MessageState} from '../../../../core/message';
 import {MessageWithBodyStanza, Stanza} from '../../../../core/stanza';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
@@ -12,7 +12,7 @@ import {MessageReceivedEvent} from './message.plugin';
 import {PublishSubscribePlugin} from './publish-subscribe.plugin';
 import {ChatPlugin} from '../../../../core/plugin';
 import {Builder} from '../interface/builder';
-import {combineLatest} from 'rxjs';
+import {combineLatest, firstValueFrom} from 'rxjs';
 
 export interface StateDate {
     lastRecipientReceived: Date;
@@ -39,18 +39,21 @@ export class MessageStatePlugin implements ChatPlugin {
 
     constructor(
         private readonly publishSubscribePlugin: PublishSubscribePlugin,
-        private readonly xmppChatAdapter: XmppService,
+        private readonly chatService: XmppService,
         private readonly chatMessageListRegistry: ChatMessageListRegistryService,
         private readonly logService: LogService,
         private readonly entityTimePlugin: EntityTimePlugin,
     ) {
-        combineLatest([this.chatMessageListRegistry.openChats$, xmppChatAdapter.state$])
+        this.chatService.onBeforeOnline$.subscribe(async () => await this.onBeforeOnline());
+        this.chatService.onOffline$.subscribe(() => this.onOffline());
+
+        combineLatest([this.chatMessageListRegistry.openChats$, chatService.state$])
             .pipe(filter(([, state]) => state === 'online'))
             .subscribe(([contacts]) => {
                 contacts.forEach(async (contact) => {
                     if (contact.mostRecentMessageReceived) {
                         await this.sendMessageStateNotification(
-                            contact.jidBare,
+                            contact.jid,
                             contact.mostRecentMessageReceived.id,
                             MessageState.RECIPIENT_SEEN);
                     }
@@ -115,7 +118,7 @@ export class MessageStatePlugin implements ChatPlugin {
         this.jidToMessageStateDate.clear();
     }
 
-    beforeSendMessage(messageStanza: Element, message: Message): void {
+    beforeSendMessage(message: Message, messageStanza: Element,): void {
         const type = messageStanza.getAttribute('type');
         if (type === 'chat' && message) {
             message.state = MessageState.SENDING;
@@ -146,15 +149,17 @@ export class MessageStatePlugin implements ChatPlugin {
 
     private acknowledgeReceivedMessage(stanza: MessageWithBodyStanza): void {
         const from = stanza.getAttribute('from');
-        const isChatWithContactOpen = this.chatMessageListRegistry.isChatOpen(this.xmppChatAdapter.getOrCreateContactByIdSync(from));
-        const state = isChatWithContactOpen ? MessageState.RECIPIENT_SEEN : MessageState.RECIPIENT_RECEIVED;
-        const messageId = MessageUuidPlugin.extractIdFromStanza(stanza);
-        this.sendMessageStateNotification(parseJid(from), messageId, state).catch(e => this.logService.error('error sending state notification', e));
+        this.chatService.getOrCreateContactById(from).then((contact) => {
+            const isChatWithContactOpen = this.chatMessageListRegistry.isChatOpen(contact);
+            const state = isChatWithContactOpen ? MessageState.RECIPIENT_SEEN : MessageState.RECIPIENT_RECEIVED;
+            const messageId = MessageUuidPlugin.extractIdFromStanza(stanza);
+            this.sendMessageStateNotification(parseJid(from), messageId, state).catch(e => this.logService.error('error sending state notification', e));
+        });
     }
 
     private async sendMessageStateNotification(recipient: JID, messageId: string, state: MessageState): Promise<void> {
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
-        await this.xmppChatAdapter.chatConnectionService
+        const from = await firstValueFrom(this.chatService.chatConnectionService.userJid$);
+        await this.chatService.chatConnectionService
             .$msg({
                 to: recipient.bare().toString(),
                 from,
@@ -183,9 +188,10 @@ export class MessageStatePlugin implements ChatPlugin {
     private handleStateNotificationStanza(stateElement: Element, from: string): void {
         const state = stateElement.getAttribute('state');
         const date = stateElement.getAttribute('date');
-        const contact = this.xmppChatAdapter.getOrCreateContactByIdSync(from);
-        const stateDate = new Date(date);
-        this.updateContactMessageState(contact.jidBare.toString(), state as MessageState, stateDate);
+        this.chatService.getOrCreateContactById(from).then((contact) => {
+            const stateDate = new Date(date);
+            this.updateContactMessageState(contact.jid.toString(), state as MessageState, stateDate);
+        });
     }
 
     private updateContactMessageState(contactJid: string, state: MessageState, stateDate: Date): void {

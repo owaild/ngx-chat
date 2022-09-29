@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import {Component} from '@angular/core';
 
 @Component({
     selector: 'ngx-chat-window-frame',
@@ -6,11 +6,4 @@ import { Component, EventEmitter, Output } from '@angular/core';
     styleUrls: ['./chat-window-frame.component.less'],
 })
 export class ChatWindowFrameComponent {
-
-    @Output()
-    closeClick = new EventEmitter<void>();
-
-    @Output()
-    headerClick = new EventEmitter<void>();
-
 }

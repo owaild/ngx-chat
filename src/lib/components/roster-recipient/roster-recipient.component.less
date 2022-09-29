@@ -1,4 +1,4 @@
-@import '../../style';
+@import '../../colors';
 
 * {
   box-sizing: border-box;
@@ -32,29 +32,11 @@
   white-space: nowrap;
 }
 
-.roster-presence {
-  display: inline-block;
-  padding-top: 0.5em;
-  margin-left: 0.3em;
-
-  &.roster-presence--present {
-    color: @success;
-  }
-
-  &.roster-presence--away {
-    color: @warning;
-  }
-
-  &.roster-presence--unavailable {
-    color: transparent;
-  }
-}
-
 .unread-message-badge {
   display: inline-block;
   padding-top: 0.2em;
-  background-color: #ff5940;
-  color: #fff;
+  background-color: @unread-badge-color;
+  color: @unread-text-color;
   border-radius: 50%;
   align-self: center;
   margin-top: 0.25em;

@@ -49,7 +49,7 @@ describe('XmppChatAdapter', () => {
 
         it('#messages$ should emit contact on received messages', (done) => {
             chatService.message$.pipe(first()).subscribe(contact => {
-                expect(contact.jidBare.toString()).toEqual(contact1.jidBare.toString());
+                expect(contact.jid.toString()).toEqual(contact1.jid.toString());
                 expect(contact.messages.length).toEqual(1);
                 expect(contact.messages[0].body).toEqual('message text');
                 expect(contact.messages[0].direction).toEqual(Direction.in);
@@ -70,7 +70,7 @@ describe('XmppChatAdapter', () => {
         });
 
         it('#messages$ in contact should emit message on received messages', async (done) => {
-            const serviceContact = await chatService.getOrCreateContactById(contact1.jidBare.toString());
+            const serviceContact = await chatService.getOrCreateContactById(contact1.jid.toString());
             serviceContact.messages$.pipe(first()).subscribe(message => {
                 expect(message.body).toEqual('message text');
                 expect(message.direction).toEqual(Direction.in);
@@ -95,7 +95,7 @@ describe('XmppChatAdapter', () => {
                 expect(contact.messages[0].id).toEqual('id');
                 messagesSeen++;
                 if (messagesSeen === 2) {
-                    const serviceContact = await chatService.getContactById(contact1.jidBare.toString());
+                    const serviceContact = await chatService.getContactById(contact1.jid.toString());
                     expect(serviceContact.messages.length).toEqual(1);
                     done();
                 }

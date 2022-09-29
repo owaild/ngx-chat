@@ -1,0 +1,26 @@
+<div class="window-header" (click)="headerClick.emit()">
+    <div class="chat-avatar-wrapper" (click)="onContactClick($event)">
+        <ngx-chat-avatar [imageUrl]="chatWindowState.recipient.avatar"></ngx-chat-avatar>
+    </div>
+
+    <div class="header-middle">
+        <div class="chat-name-wrapper" [title]="chatWindowState.recipient.name">
+                <span [ngClass]="{'has-click-handler': !chatWindowState.isCollapsed && !!this.contactClickHandler}"
+                      (click)="onContactClick($event)">
+                    {{chatWindowState.recipient.name}}
+                </span>
+        </div>
+
+        <div class="chat-status-wrapper" *ngIf="!chatWindowState.isCollapsed && isContactInWindow(chatWindowState)">
+                <span class="chat-status">
+                    {{chatService.translations.presence[(recipientAsContact).presence$ | async]}}
+                </span>
+        </div>
+    </div>
+
+    <div class="window-close"
+         data-zid="close-chat"
+         (click)="closeClick.emit()">
+        &times;
+    </div>
+</div>

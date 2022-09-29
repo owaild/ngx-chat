@@ -1,17 +1,17 @@
 <div>
     <h2>Chat rooms:</h2>
     <div *ngIf="(chatService.state$ | async) === 'online'; else offline">
-        <div *ngFor="let room of (this.chatService.rooms$ | async)">
+        <div *ngFor="let room of (chatService.rooms$ | async)">
             {{room.roomJid.bare().toString()}}:
             <button (click)="selectedRoom = room">Select</button>
             <button (click)="leaveRoom(room.occupantJid)" class="red">Leave</button>
         </div>
 
         <ng-container *ngIf="selectedRoom">
-            <ngx-chat-message-list [recipient]="selectedRoom"></ngx-chat-message-list>
-            <ngx-chat-message-input [recipient]="selectedRoom"></ngx-chat-message-input>
+            <ngx-chat-history [recipient]="selectedRoom"></ngx-chat-history>
+            <ngx-chat-window-input [recipient]="selectedRoom"></ngx-chat-window-input>
         </ng-container>
-        <span *ngIf="(this.chatService.rooms$ | async).length === 0">(no room joined yet)</span>
+        <span *ngIf="(chatService.rooms$ | async).length === 0">(no room joined yet)</span>
 
         <hr/>
 

@@ -13,7 +13,11 @@ import {XmppService} from './xmpp.service';
 import {TestBed} from '@angular/core/testing';
 import {testLogService} from '../../test/log-service';
 import {EjabberdClient} from '../../test/ejabberd-client';
+
 @NgModule({
+    imports: [
+        HttpClientModule
+    ],
     providers: [
         ChatBackgroundNotificationService,
         ChatListStateService,
@@ -67,7 +71,7 @@ export class XmppServiceModule {
         );
     }
 
-    static configureTestingModule(){
+    static configureTestingModule() {
         TestBed.configureTestingModule({
             providers: [
                 ChatMessageListRegistryService,
@@ -85,6 +89,6 @@ export class XmppServiceModule {
         return {
             xmppService: TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService,
             ejabberdClient: new EjabberdClient(),
-        }
+        };
     }
 }

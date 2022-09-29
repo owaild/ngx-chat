@@ -1,14 +1,9 @@
-import {ChangeDetectionStrategy, Component, Inject, Input, OnDestroy, OnInit, Optional, ViewChild} from '@angular/core';
-import {Observable, Subject} from 'rxjs';
-import {filter, takeUntil} from 'rxjs/operators';
-import {Direction, Message} from '../../core/message';
-import {ChatContactClickHandler, CONTACT_CLICK_HANDLER_TOKEN} from '../../hooks/chat-contact-click-handler';
+import {ChangeDetectionStrategy, Component, Inject, Input, OnDestroy, OnInit} from '@angular/core';
+import {merge, Observable, scan, Subject} from 'rxjs';
+import {filter, map, takeUntil} from 'rxjs/operators';
+import {Direction} from '../../core/message';
 import {ChatListStateService, ChatWindowState} from '../../services/components/chat-list-state.service';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
-import {ChatMessageInputComponent} from '../chat-message-input/chat-message-input.component';
-import {ChatMessageListComponent} from '../chat-message-list/chat-message-list.component';
-import {FILE_UPLOAD_HANDLER_TOKEN, FileUploadHandler} from '../../hooks/file-upload-handler';
-import {RoomMessage} from '../../services/adapters/xmpp/plugins/multi-user-chat/room-message';
 
 @Component({
     selector: 'ngx-chat-window',
@@ -19,34 +14,32 @@ import {RoomMessage} from '../../services/adapters/xmpp/plugins/multi-user-chat/
 export class ChatWindowComponent implements OnInit, OnDestroy {
 
     @Input()
-    public chatWindowState: ChatWindowState;
+    chatWindowState: ChatWindowState;
 
-    @ViewChild(ChatMessageInputComponent)
-    private readonly messageInput: ChatMessageInputComponent;
+    isWindowOpen$: Observable<boolean>;
 
-    @ViewChild(ChatMessageListComponent)
-    private readonly contactMessageList: ChatMessageListComponent;
+    private readonly headerClickedSubject = new Subject<void>();
 
     private readonly ngDestroy = new Subject<void>();
 
     constructor(
         @Inject(CHAT_SERVICE_TOKEN) readonly chatService: ChatService,
         private readonly chatListService: ChatListStateService,
-        @Inject(FILE_UPLOAD_HANDLER_TOKEN) readonly fileUploadHandler: FileUploadHandler,
-        @Inject(CONTACT_CLICK_HANDLER_TOKEN) @Optional() readonly contactClickHandler: ChatContactClickHandler,
     ) {
     }
 
     ngOnInit() {
-        const messages$: Observable<RoomMessage | Message> = this.chatWindowState.recipient.messages$;
-        messages$
+        const openOnInit$ = this.chatWindowState.recipient.messages$
             .pipe(
                 filter(message => message.direction === Direction.in),
+                map(() => true),
                 takeUntil(this.ngDestroy),
-            )
-            .subscribe(() => {
-                this.chatWindowState.isCollapsed = false;
-            });
+            );
+
+        const toggleOpen$ = this.headerClickedSubject.pipe(
+            scan((toggle) => !toggle, false)
+        );
+        this.isWindowOpen$ = merge(openOnInit$, toggleOpen$);
     }
 
     ngOnDestroy() {
@@ -55,34 +48,10 @@ export class ChatWindowComponent implements OnInit, OnDestroy {
     }
 
     public onClickHeader() {
-        this.chatWindowState.isCollapsed = !this.chatWindowState.isCollapsed;
+        this.headerClickedSubject.next();
     }
 
     public onClickClose() {
         this.chatListService.closeChat(this.chatWindowState.recipient);
-    }
-
-    async sendMessage() {
-        await this.messageInput.onSendMessage();
-    }
-
-    afterSendMessage() {
-        this.contactMessageList.scheduleScrollToLastMessage();
-    }
-
-    async uploadFile(file: File) {
-        const url = await this.fileUploadHandler.upload(file);
-        await this.chatService.sendMessage(this.chatWindowState.recipient, url);
-    }
-
-    onFocus() {
-        this.messageInput.focus();
-    }
-
-    onContactClick($event: MouseEvent) {
-        if (this.contactClickHandler && !this.chatWindowState.isCollapsed) {
-            $event.stopPropagation();
-            this.contactClickHandler.onClick(this.chatWindowState.recipient);
-        }
     }
 }

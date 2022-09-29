@@ -1,4 +1,4 @@
-@import '../../style';
+@import '../../colors';
 
 * {
   box-sizing: border-box;
@@ -16,28 +16,4 @@
   bottom: 0;
   pointer-events: auto;
   position: relative;
-}
-
-.window-header {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid @general-border-color;
-  cursor: pointer;
-  height: 2.5em;
-  align-items: center;
-  padding: 0.25em;
-
-  &:hover {
-    background-color: #efefef;
-  }
-}
-
-.window-close {
-  padding: .5em;
-  text-align: right;
-  color: #777;
-
-  &:hover {
-    color: #000;
-  }
 }

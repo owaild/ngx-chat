@@ -1,5 +1,5 @@
 import {BehaviorSubject, Subject} from 'rxjs';
-import {debounceTime, filter} from 'rxjs/operators';
+import {debounceTime, takeUntil} from 'rxjs/operators';
 import {Recipient} from '../../../../core/recipient';
 import {Stanza} from '../../../../core/stanza';
 import {LogService} from '../service/log.service';
@@ -9,10 +9,11 @@ import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {nsPubSubEvent} from './publish-subscribe.plugin';
 import {MessagePlugin} from './message.plugin';
 import {Form, serializeToSubmitForm} from '../../../../core/form';
-import {ChatPlugin} from '../../../../core/plugin';
+import {StanzaHandlerChatPlugin} from '../../../../core/plugin';
 import {Contact} from '../../../../core/contact';
 import {Finder} from '../shared/finder';
 import {MUC_SUB_EVENT_TYPE} from './multi-user-chat/muc-sub-event-type';
+import {ChatConnection} from '../interface/chat-connection';
 
 const nsMAM = 'urn:xmpp:mam:2';
 
@@ -20,10 +21,15 @@ const nsMAM = 'urn:xmpp:mam:2';
  * https://xmpp.org/extensions/xep-0313.html
  * Message Archive Management
  */
-export class MessageArchivePlugin implements ChatPlugin {
+export class MessageArchivePlugin implements StanzaHandlerChatPlugin {
     readonly nameSpace = nsMAM;
 
-    private readonly mamMessageReceived$ = new Subject<void>();
+    private readonly mamMessageReceivedSubject = new Subject<void>();
+    private readonly mamStanzaSubject = new Subject<Stanza>();
+
+    private readonly unsubscribeSubject = new Subject<void>();
+
+    private mamHandler: object;
 
     constructor(
         private readonly chatService: XmppService,
@@ -33,18 +39,42 @@ export class MessageArchivePlugin implements ChatPlugin {
         private readonly contactsSubject: BehaviorSubject<Contact[]>,
         private readonly logService: LogService,
     ) {
-        this.chatService.state$
-            .pipe(filter(state => state === 'online'))
-            .subscribe(async () => await this.requestNewestMessages());
+        this.chatService.onBeforeOnline$.subscribe(async () => {
+            await this.requestNewestMessages();
+            await this.registerHandler(this.chatService.chatConnectionService);
+        });
+
+        this.chatService.onOffline$.subscribe(async () => {
+            await this.unregisterHandler(this.chatService.chatConnectionService);
+        });
+
+        this.mamStanzaSubject
+            .pipe(takeUntil(this.unsubscribeSubject))
+            .subscribe(async (stanza) => await this.handleMamMessageStanza(stanza));
 
         // emit contacts to refresh contact list after receiving mam messages
-        this.mamMessageReceived$
+        this.mamMessageReceivedSubject
             .pipe(debounceTime(10))
             .subscribe(() => this.contactsSubject.next(this.contactsSubject.getValue()));
     }
 
+    async registerHandler(connection: ChatConnection): Promise<void> {
+        this.mamHandler = connection.addHandler((stanza) => {
+            console.log('handleMamStanzaSubject');
+            this.mamStanzaSubject.next(stanza);
+            return true;
+        }, {ns: this.nameSpace, name: 'message'});
+    }
+
+    async unregisterHandler(connection: ChatConnection): Promise<void> {
+        connection.deleteHandler(this.mamHandler);
+        this.unsubscribeSubject.next();
+    }
+
+
     private async requestNewestMessages(): Promise<void> {
-        await this.chatService.chatConnectionService.$iq({type: 'set'})
+        await this.chatService.chatConnectionService
+            .$iq({type: 'set'})
             .c('query', {xmlns: this.nameSpace})
             .c('set', {xmlns: nsRSM})
             .c('max', {}, '250')
@@ -62,7 +92,7 @@ export class MessageArchivePlugin implements ChatPlugin {
             fields: [
                 {type: 'hidden', variable: 'FORM_TYPE', value: this.nameSpace},
                 ...(recipient.recipientType === 'contact'
-                    ? [{type: 'jid-single', variable: 'with', value: recipient.jidBare.toString()}] as const
+                    ? [{type: 'jid-single', variable: 'with', value: (recipient as Contact).jid.toString()}] as const
                     : []),
                 ...(recipient.oldestMessage
                     ? [{type: 'text-single', variable: 'end', value: recipient.oldestMessage.datetime.toISOString()}] as const
@@ -97,57 +127,56 @@ export class MessageArchivePlugin implements ChatPlugin {
         }
     }
 
-    async registerHandler(stanza: Stanza): Promise<boolean> {
-        if (this.isMamMessageStanza(stanza)) {
-            this.handleMamMessageStanza(stanza);
-            return true;
-        }
-        return false;
-    }
+    private async handleMamMessageStanza(stanza: Stanza): Promise<void> {
+        const messageElement = Finder.create(stanza)
+            .searchByTag('result')
+            .searchByTag('forwarded')
+            .searchByTag('message')
+            .result;
 
-    private isMamMessageStanza(stanza: Stanza): boolean {
-        const result = stanza.querySelector('result');
-        return stanza.tagName === 'message' && result?.getAttribute('xmlns') === this.nameSpace;
-    }
+        const delayElement = Finder.create(stanza)
+            .searchByTag('result')
+            .searchByTag('forwarded')
+            .searchByTag('delay')
+            .result;
 
-    private handleMamMessageStanza(stanza: Stanza): void {
-        const forwardedElement = Finder.create(stanza).searchByTag('result').searchByTag('forwarded');
-        const messageElement = forwardedElement.searchByTag('message');
-        const delayElement = forwardedElement.searchByTag('delay');
+        const eventElement = Finder.create(stanza)
+            .searchByTag('result')
+            .searchByTag('forwarded')
+            .searchByTag('message')
+            .searchByTag('event')
+            .searchByNamespace(nsPubSubEvent)
+            .result;
 
-        const eventElement = messageElement.searchByTag('event').searchByNamespace(nsPubSubEvent);
-        if (messageElement.result.getAttribute('type') == null && eventElement != null) {
-            this.handlePubSubEvent(eventElement.result, delayElement.result);
+        console.log('handleMamMessageStanza eventElement=', eventElement);
+        if (eventElement) {
+            const itemsElement = eventElement.querySelector('items');
+            const itemsNode = itemsElement?.getAttribute('node');
+
+            if (itemsNode !== MUC_SUB_EVENT_TYPE.messages) {
+                this.logService.warn(`Handling of MUC/Sub message types other than ${MUC_SUB_EVENT_TYPE.messages} isn't implemented yet!`);
+                return;
+            }
+
+            const itemElements = Array.from(itemsElement.querySelectorAll('item'));
+            console.log('all itemElements=', itemElements);
+            await Promise.all(itemElements.map((itemEl) => this.handleMessage(itemEl.querySelector('message'), delayElement)));
         } else {
-            this.handleArchivedMessage(messageElement.result, delayElement.result);
+            console.log('handleMamMessageStanza messageElement=', messageElement);
+            await this.handleMessage(messageElement, delayElement);
         }
+
     }
 
-    private handleArchivedMessage(messageElement: Stanza, delayEl: Element): void {
+    private async handleMessage(messageElement: Element, delayElement: Element) {
         const type = messageElement.getAttribute('type');
         if (type === 'chat') {
-            const messageHandled = this.messagePlugin.registerHandler(messageElement, delayEl);
-            if (messageHandled) {
-                this.mamMessageReceived$.next();
-            }
+            await this.messagePlugin.handleMessageStanza(messageElement, delayElement);
+            this.mamMessageReceivedSubject.next();
         } else if (type === 'groupchat' || this.multiUserChatPlugin.isRoomInvitationStanza(messageElement)) {
-            throw new Error('NOT IMPLEMENTED');
-            // this.multiUserChatPlugin.registerHandler(messageElement);
+            throw new Error('type:groupchat NOT IMPLEMENTED');
         } else {
             throw new Error(`unknown archived message type: ${type}`);
         }
-    }
-
-    private handlePubSubEvent(eventElement: Element, delayElement: Element): void {
-        const itemsElement = eventElement.querySelector('items');
-        const itemsNode = itemsElement?.getAttribute('node');
-
-        if (itemsNode !== MUC_SUB_EVENT_TYPE.messages) {
-            this.logService.warn(`Handling of MUC/Sub message types other than ${MUC_SUB_EVENT_TYPE.messages} isn't implemented yet!`);
-            return;
-        }
-
-        const itemElements = Array.from(itemsElement.querySelectorAll('item'));
-        itemElements.forEach((itemEl) => this.handleArchivedMessage(itemEl.querySelector('message'), delayElement));
     }
 }

@@ -34,17 +34,17 @@ export class AppPage {
         this.logoutButton = page.locator('[name=logout]');
         this.registerButton = page.locator('[name=register]');
         this.roosterOnline = page.locator('.roster-list[data-ngx-chat-state="online"]');
-        this.contactJid = page.locator('[data-name="contact-jid"]');
+        this.contactJid = page.locator('[data-zid="contact-jid"]');
 
-        this.addContactButton = page.locator('[data-name="add-contact"]');
-        this.removeContactButton = page.locator('[data-name="remove-contact"]');
-        this.blockContactButton = page.locator('[data-name="block-contact"]');
-        this.unblockContactButton = page.locator('[data-name="unblock-contact"]');
-        this.openChatButton = page.locator('[data-name="open-chat"]');
+        this.addContactButton = page.locator('[data-zid="add-contact"]');
+        this.removeContactButton = page.locator('[data-zid="remove-contact"]');
+        this.blockContactButton = page.locator('[data-zid="block-contact"]');
+        this.unblockContactButton = page.locator('[data-zid="unblock-contact"]');
+        this.openChatButton = page.locator('[data-zid="open-chat"]');
 
         this.createRoosterEntrySelector = (jid) => `.roster-recipient[title="${jid.toLowerCase()}"]`;
         this.createRoosterEntryLocator = (jid) => page.locator(this.createRoosterEntrySelector(jid));
-        this.createChatBoxInputLocator = (username) => page.locator(`[data-name=chat-input-${username.toLowerCase()}]`);
+        this.createChatBoxInputLocator = (username) => page.locator(`[data-zid=chat-input-${username.toLowerCase()}]`);
 
         page.on('console', (message) => {
             if (message.type() === 'error') {
@@ -108,13 +108,13 @@ export class AppPage {
     }
 
     async isRegistrationForUserSuccessful(username: string,): Promise<boolean> {
-        const selector = `[data-name="registration-success"]:has-text("${username}")`;
+        const selector = `[data-zid="registration-success"]:has-text("${username}")`;
         await this.page.waitForSelector(selector);
         return await this.page.locator(selector).count() > 0;
     }
 
     async waitForOffline(): Promise<void> {
-        await this.page.waitForSelector('div[data-name="chat-connection-state"]:has-text("State: disconnected")');
+        await this.page.waitForSelector('div[data-zid="chat-connection-state"]:has-text("State: disconnected")');
     }
 
     async isUserOnline(): Promise<boolean> {

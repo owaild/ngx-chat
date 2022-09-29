@@ -17,17 +17,17 @@ export class ChatWindowPage {
 
     constructor(page: Page, jid: string) {
         this.windowLocator = page.locator(`.window`, {hasText: jid.toLowerCase()});
-        this.closeChatButton = this.windowLocator.locator('[data-name="close-chat"]');
+        this.closeChatButton = this.windowLocator.locator('[data-zid="close-chat"]');
         this.inMessage = this.windowLocator.locator('.chat-message--in ngx-chat-message-text');
         this.outMessage = this.windowLocator.locator('.chat-message--out ngx-chat-message-text');
 
-        this.acceptLink = this.windowLocator.locator('a[data-name="accept-user"]');
-        this.denyLink = this.windowLocator.locator('a[data-name="deny-user"]');
-        this.blockLink = this.windowLocator.locator('a[data-name="block-user"]');
-        this.blockAndReportLink = this.windowLocator.locator('a[data-name="block-and-report-user"]');
-        this.dismissLink = this.windowLocator.locator('a[data-name="dismiss-block-message"]');
+        this.acceptLink = this.windowLocator.locator('a[data-zid="accept-user"]');
+        this.denyLink = this.windowLocator.locator('a[data-zid="deny-user"]');
+        this.blockLink = this.windowLocator.locator('a[data-zid="block-user"]');
+        this.blockAndReportLink = this.windowLocator.locator('a[data-zid="block-and-report-user"]');
+        this.dismissLink = this.windowLocator.locator('a[data-zid="dismiss-block-message"]');
 
-        this.chatInput = this.windowLocator.locator(`[data-name="chat-input"]`);
+        this.chatInput = this.windowLocator.locator(`[data-zid="chat-input"]`);
     }
 
     async writeTo(username: string, message: string) {

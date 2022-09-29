@@ -17,8 +17,65 @@ export class UiComponent implements OnInit {
     room: Room;
     private myJid: JID = parseJid('me@example.com');
     private otherContactJid: JID = parseJid('other@example.com');
-
-    constructor() { }
+    outMessages = [
+        {
+            contact: {
+                avatar: dummyAvatarContact,
+                nick: "chat partner",
+            },
+            message: {
+            },
+        },
+        {},
+        // <ngx-chat-message-out class="chat-message--out"
+        //     [avatar]="dummyAvatarContact"
+        // formattedDate="2020-06-04 18:35"
+        // nick="chat partner"
+        //     [messageState]="MessageState.SENDING">
+        //     Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+        //     Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
+        // dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+        // proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        // </ngx-chat-message-out>
+        // <ngx-chat-message-out class="chat-message--out"
+        //     [avatar]="dummyAvatarContact"
+        //     [direction]="Direction.out"
+        // formattedDate="2020-06-04 18:35"
+        // nick="chat partner"
+        //     [messageState]="MessageState.SENDING">
+        //     sending
+        //     </ngx-chat-message-out>
+        //     <ngx-chat-message-out class="chat-message--out"
+        //     [avatar]="dummyAvatarContact"
+        //     [direction]="Direction.out"
+        // formattedDate="2020-06-04 18:35"
+        // nick="chat partner"
+        //     [messageState]="MessageState.SENT">
+        //     sent
+        //     </ngx-chat-message-out>
+        //     <ngx-chat-message-out class="chat-message--out"
+        //     [avatar]="dummyAvatarContact"
+        //     [direction]="Direction.out"
+        // formattedDate="2020-06-04 18:35"
+        // nick="chat partner"
+        //     [messageState]="MessageState.RECIPIENT_RECEIVED">
+        //     recipient received
+        // </ngx-chat-message-out>
+        // <ngx-chat-message-out class="chat-message--out"
+        //     [avatar]="dummyAvatarContact"
+        // formattedDate="2020-06-04 18:36"
+        // nick="chat partner"
+        //     [messageState]="MessageState.RECIPIENT_SEEN">
+        //     recipient seen
+        // </ngx-chat-message-out>
+        // <ngx-chat-message-out class="chat-message--out"
+        //     [direction]="Direction.out"
+        // formattedDate="2020-06-04 18:37"
+        // imageLink="https://dummyimage.com/600x400/000/fff"
+        // nick="chat partner">
+        //     content goes here
+        // </ngx-chat-message-out>
+    ]
 
     ngOnInit(): void {
         this.contact = new Contact(this.otherContactJid.toString(), 'chat partner name');

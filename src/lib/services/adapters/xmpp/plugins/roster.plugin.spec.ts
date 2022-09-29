@@ -41,8 +41,8 @@ fdescribe('roster plugin', () => {
     });
 
     afterAll(async () => {
-        // await client.cleanUpJabber(domain);
-    })
+        await client.cleanUpJabber(domain);
+    });
 
 
     fit('should handle adding a contact with a pending request to roster', async () => {
@@ -51,10 +51,23 @@ fdescribe('roster plugin', () => {
         await chatService.addContact(timJID.toString());
         const contacts = await firstValueFrom(chatService.contacts$);
 
+        console.log('Contacts are: ', contacts.map(i => i.name));
+
         expect(contacts.length).toEqual(1);
+        await chatService.logOut();
     });
 
-    it('should be able to reject a contact request', async () => {
+    fit('should be able to reject a contact request', async () => {
+        await chatService.logIn(timLogin);
+
+        const contacts = await firstValueFrom(chatService.contacts$);
+
+        expect(contacts.length).toEqual(1);
+
+        await chatService.removeContact(contacts[0].jid.toString())
+
+        expect(contacts.length).toEqual(0);
+        await chatService.logOut();
     });
 
     it('should be able to remove a contact request', async () => {
@@ -98,31 +111,31 @@ fdescribe('roster plugin', () => {
 
 
     it('should handle presence available', async () => {
-/*
-        // const contact = await setupMockContact();
+        /*
+                // const contact = await setupMockContact();
 
-        expect(contact.presence$.getValue()).toEqual(Presence.unavailable);
+                expect(contact.presence$.getValue()).toEqual(Presence.unavailable);
 
-        expect(handled).toBeTruthy();
+                expect(handled).toBeTruthy();
 
-        expect(contact.presence$.getValue()).toEqual(Presence.present);
-*/
+                expect(contact.presence$.getValue()).toEqual(Presence.present);
+        */
     });
 
     it('should handle presence unavailable stanzas', async () => {
-/*
-        const contact = await setupMockContact();
+        /*
+                const contact = await setupMockContact();
 
-        contact.updateResourcePresence(contact.jidBare.toString() + '/bla', Presence.present);
-        expect(contact.presence$.getValue()).toEqual(Presence.present);
+                contact.updateResourcePresence(contact.jidBare.toString() + '/bla', Presence.present);
+                expect(contact.presence$.getValue()).toEqual(Presence.present);
 
-        const handled = rosterPlugin.registerHandler(
-            xml('presence', {from: 'test@example.com/bla', to: 'me@example.com/bla', type: 'unavailable'})
-        );
-        expect(handled).toBeTruthy();
+                const handled = rosterPlugin.registerHandler(
+                    xml('presence', {from: 'test@example.com/bla', to: 'me@example.com/bla', type: 'unavailable'})
+                );
+                expect(handled).toBeTruthy();
 
-        expect(contact.presence$.getValue()).toEqual(Presence.unavailable);
-*/
+                expect(contact.presence$.getValue()).toEqual(Presence.unavailable);
+        */
     });
 
     it('should handle multiple resources and summarize the status', async () => {
@@ -158,19 +171,19 @@ fdescribe('roster plugin', () => {
     });
 
     it('should handle subscribe from a contact and promote subscription from "none" to "from"', async () => {
-       /* const contact = await setupMockContact();
-        contact.pendingOut$.next(true);
-        contact.pendingIn$.next(true);
-        contact.subscription$.next(ContactSubscription.none);
+        /* const contact = await setupMockContact();
+         contact.pendingOut$.next(true);
+         contact.pendingIn$.next(true);
+         contact.subscription$.next(ContactSubscription.none);
 
-        const handled = rosterPlugin.registerHandler(
-            xml('presence', {from: 'test@example.com', to: 'me@example.com/resource', type: 'subscribe'})
-        );
-        expect(handled).toBeTruthy();
+         const handled = rosterPlugin.registerHandler(
+             xml('presence', {from: 'test@example.com', to: 'me@example.com/resource', type: 'subscribe'})
+         );
+         expect(handled).toBeTruthy();
 
-        expect(contact.pendingIn$.getValue()).toBeFalsy();
-        assertAcceptedPresenceSubscription();
-        expect(contact.subscription$.getValue()).toEqual(ContactSubscription.from);*/
+         expect(contact.pendingIn$.getValue()).toBeFalsy();
+         assertAcceptedPresenceSubscription();
+         expect(contact.subscription$.getValue()).toEqual(ContactSubscription.from);*/
     });
 
     it('should add a pending in flag to a contact where we have no subscription or pending subscription to', async () => {
@@ -186,17 +199,17 @@ fdescribe('roster plugin', () => {
     });
 
     it('should add a pending in flag and create a contact when we never seen him before', async () => {
-       /* const handled = rosterPlugin.registerHandler(
-            xml('presence', {from: 'test@example.com', to: 'me@example.com/resource', type: 'subscribe'})
-        );
-        expect(handled).toBeTruthy();
+        /* const handled = rosterPlugin.registerHandler(
+             xml('presence', {from: 'test@example.com', to: 'me@example.com/resource', type: 'subscribe'})
+         );
+         expect(handled).toBeTruthy();
 
-        chatAdapter.contactRequestsReceived$.subscribe(contacts => {
-            expect(contacts.length).toEqual(1);
-            const contact = contacts[0];
-            expect(contact.pendingIn$.getValue()).toBeTruthy();
-            expect(contact.subscription$.getValue()).toEqual(ContactSubscription.none);
-        });*/
+         chatAdapter.contactRequestsReceived$.subscribe(contacts => {
+             expect(contacts.length).toEqual(1);
+             const contact = contacts[0];
+             expect(contact.pendingIn$.getValue()).toBeTruthy();
+             expect(contact.subscription$.getValue()).toEqual(ContactSubscription.none);
+         });*/
     });
 
     it('should reset pending out on contact and transition subscription state if contact accepts our subscription', async () => {

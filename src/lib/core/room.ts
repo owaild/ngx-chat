@@ -2,15 +2,20 @@ import {JID} from '@xmpp/jid';
 import {ReplaySubject, Subject} from 'rxjs';
 import {dummyAvatarRoom} from './contact-avatar';
 import {DateMessagesGroup, MessageStore} from './message-store';
+import {Message} from './message';
 import {LogService} from '../services/adapters/xmpp/service/log.service';
 import {jid as parseJid} from '@xmpp/client';
 import {isJid, Recipient} from './recipient';
 import {RoomOccupant} from '../services/adapters/xmpp/plugins/multi-user-chat/room-occupant';
-import {RoomMessage} from '../services/adapters/xmpp/plugins/multi-user-chat/room-message';
 import {OccupantChange} from '../services/adapters/xmpp/plugins/multi-user-chat/occupant-change';
 import {Form} from './form';
 
-export class Room {
+
+export function isRoom(recipient: Recipient): recipient is Room {
+    return recipient.recipientType === 'room';
+}
+
+export class Room implements Recipient {
     readonly recipientType = 'room';
     readonly jid: JID;
     occupantJid: JID | undefined;
@@ -18,8 +23,8 @@ export class Room {
     subject = '';
     avatar = dummyAvatarRoom;
     // Room configuration
-    info: Form | null;
-    private readonly messageStore: MessageStore<RoomMessage>;
+    info: Form;
+    private readonly messageStore: MessageStore<Message>;
     private readonly roomOccupants = new Map<string, RoomOccupant>();
     private readonly onOccupantChangeSubject = new ReplaySubject<OccupantChange>(Infinity, 1000);
     readonly onOccupantChange$ = this.onOccupantChangeSubject.asObservable();
@@ -29,7 +34,7 @@ export class Room {
     constructor(roomJid: JID, private readonly logService: LogService, name?: string) {
         this.jid = roomJid.bare();
         this.name = name;
-        this.messageStore = new MessageStore<RoomMessage>(logService);
+        this.messageStore = new MessageStore<Message>(logService);
     }
 
     get nick(): string | undefined {
@@ -53,43 +58,39 @@ export class Room {
         this._name = !!name ? name : this.jid.local;
     }
 
-    get jidBare(): JID {
-        return this.jid;
-    }
-
-    get messages$(): Subject<RoomMessage> {
+    get messages$(): Subject<Message> {
         return this.messageStore.messages$;
     }
 
-    get messages(): RoomMessage[] {
+    get messages(): Message[] {
         return this.messageStore.messages;
     }
 
-    get dateMessagesGroups(): DateMessagesGroup<RoomMessage>[] {
+    get dateMessagesGroups(): DateMessagesGroup<Message>[] {
         return this.messageStore.dateMessageGroups;
     }
 
-    get oldestMessage(): RoomMessage {
+    get oldestMessage(): Message {
         return this.messageStore.oldestMessage;
     }
 
-    get mostRecentMessage(): RoomMessage {
+    get mostRecentMessage(): Message {
         return this.messageStore.mostRecentMessage;
     }
 
-    get mostRecentMessageReceived(): RoomMessage {
+    get mostRecentMessageReceived(): Message {
         return this.messageStore.mostRecentMessageReceived;
     }
 
-    get mostRecentMessageSent(): RoomMessage {
+    get mostRecentMessageSent(): Message {
         return this.messageStore.mostRecentMessageSent;
     }
 
-    addMessage(message: RoomMessage): void {
+    addMessage(message: Message): void {
         this.messageStore.addMessage(message);
     }
 
-    equalsBareJid(other: Recipient | JID): boolean {
+    equalsJid(other: Recipient | JID): boolean {
         if (other instanceof Room || isJid(other)) {
             const otherJid = other instanceof Room ? other.jid : other.bare();
             return this.jid.equals(otherJid);

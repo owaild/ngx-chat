@@ -1,7 +1,7 @@
 import {jid as parseJid} from '@xmpp/client';
 import {jid, JID} from '@xmpp/jid';
 import {combineLatest, firstValueFrom, mergeMap, Observable, startWith, Subject} from 'rxjs';
-import {Direction} from '../../../../../core/message';
+import {Direction, Message} from '../../../../../core/message';
 import {IqResponseStanza, Stanza} from '../../../../../core/stanza';
 import {LogService} from '../../service/log.service';
 import {Finder} from '../../shared/finder';
@@ -14,7 +14,6 @@ import {Affiliation, AffiliationModification} from './affiliation';
 import {Role} from './role';
 import {RoomOccupant} from './room-occupant';
 import {Invitation} from './invitation';
-import {RoomMessage} from './room-message';
 import {Form, FORM_NS, getField, parseForm, serializeToSubmitForm, setFieldValue, TextualFormField,} from '../../../../../core/form';
 import {nsMuc, nsMucAdmin, nsMucOwner, nsMucRoomConfigForm, nsMucUser} from './multi-user-chat-constants';
 import {first, map, scan, shareReplay} from 'rxjs/operators';
@@ -126,32 +125,32 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     private handlers = {destroy: null, presence: null, message: null};
 
     constructor(
-        private readonly xmppChatAdapter: XmppService,
+        private readonly xmppService: XmppService,
         private readonly logService: LogService,
         private readonly serviceDiscoveryPlugin: ServiceDiscoveryPlugin,
     ) {
-        xmppChatAdapter.onBeforeOnline$.subscribe(async () => {
+        xmppService.onBeforeOnline$.subscribe(async () => {
             this.clearRoomsSubject.next();
-            await this.registerHandler(xmppChatAdapter.chatConnectionService);
+            await this.registerHandler(xmppService.chatConnectionService);
         });
 
-        xmppChatAdapter.onOffline$.subscribe(async () => {
-            await this.unregisterHandler(xmppChatAdapter.chatConnectionService);
+        xmppService.onOffline$.subscribe(async () => {
+            await this.unregisterHandler(xmppService.chatConnectionService);
             this.clearRoomsSubject.next();
         });
     }
 
     async registerHandler(chatConnection: ChatConnection): Promise<void> {
-        this.handlers.destroy = this.xmppChatAdapter.chatConnectionService.addHandler((stanza) => this.handleRoomDestroyedStanza(stanza),
+        this.handlers.destroy = this.xmppService.chatConnectionService.addHandler((stanza) => this.handleRoomDestroyedStanza(stanza),
             {ns: nsMucUser, name: 'destroy'}
         );
 
-        this.handlers.presence = this.xmppChatAdapter.chatConnectionService.addHandler((stanza) => this.handleRoomPresenceStanza(stanza),
+        this.handlers.presence = this.xmppService.chatConnectionService.addHandler((stanza) => this.handleRoomPresenceStanza(stanza),
             {ns: nsMuc, name: 'presence'},
             {ignoreNamespaceFragment: true, matchBareFromJid: true}
         );
 
-        this.handlers.message = this.xmppChatAdapter.chatConnectionService.addHandler((stanza) => this.handleRoomMessageStanza(stanza),
+        this.handlers.message = this.xmppService.chatConnectionService.addHandler((stanza) => this.handleRoomMessageStanza(stanza),
             {type: 'groupchat', name: 'message'},
         );
     }
@@ -197,7 +196,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
 
     async destroyRoom(roomJid: JID): Promise<void> {
         try {
-            await this.xmppChatAdapter.chatConnectionService
+            await this.xmppService.chatConnectionService
                 .$iq({type: 'set', to: roomJid.toString()})
                 .c('query', {xmlns: nsMucOwner})
                 .c('destroy')
@@ -215,7 +214,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     async getRoomInfo(roomJid: JID): Promise<Form | null> {
-        const roomInfoResponse = await this.xmppChatAdapter.chatConnectionService
+        const roomInfoResponse = await this.xmppService.chatConnectionService
             .$iq({type: 'get', to: roomJid.toString()})
             .c('query', {xmlns: nsDiscoInfo})
             .sendAwaitingResponse();
@@ -236,7 +235,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
         const conferenceServer = await this.serviceDiscoveryPlugin.findService('conference', 'text');
         const to = conferenceServer.jid.toString();
 
-        const roomQueryResponse = await this.xmppChatAdapter.chatConnectionService
+        const roomQueryResponse = await this.xmppService.chatConnectionService
             .$iq({type: 'get', to})
             .c('query', {xmlns: nsDiscoItems})
             .sendAwaitingResponse();
@@ -248,7 +247,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
         const conferenceServer = await this.serviceDiscoveryPlugin.findService('conference', 'text');
         const to = conferenceServer.jid.toString();
 
-        let roomQueryResponse = await this.xmppChatAdapter.chatConnectionService
+        let roomQueryResponse = await this.xmppService.chatConnectionService
             .$iq({type: 'get', to})
             .c('query', {xmlns: nsDiscoItems})
             .sendAwaitingResponse();
@@ -266,7 +265,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
         let resultSet = extractResultSet(roomQueryResponse);
         while (resultSet && resultSet.querySelector('last')) {
             const lastReceivedRoom = resultSet.querySelector('last').textContent;
-            roomQueryResponse = await this.xmppChatAdapter.chatConnectionService
+            roomQueryResponse = await this.xmppService.chatConnectionService
                 .$iq({type: 'get', to})
                 .c('query', {xmlns: nsDiscoItems})
                 .c('set', {xmlns: nsRSM})
@@ -279,7 +278,11 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
 
         await Promise.all(
             result.map(async (summary) => {
-                summary.info = await this.getRoomInfo(summary.jid);
+                const roomInfo = await this.getRoomInfo(summary.jid);
+                if(!roomInfo){
+                    return;
+                }
+                summary.info = roomInfo;
             }),
         );
 
@@ -296,7 +299,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
                 ...Object
                     .values(Affiliation)
                     .map(affiliation =>
-                        this.xmppChatAdapter.chatConnectionService
+                        this.xmppService.chatConnectionService
                             .$iq({type: 'get', to: roomJid.toString()})
                             .c('query', {xmlns: nsMucAdmin})
                             .c('item', {affiliation})
@@ -305,7 +308,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
                 ...Object
                     .values(Role)
                     .map(role =>
-                        this.xmppChatAdapter.chatConnectionService
+                        this.xmppService.chatConnectionService
                             .$iq({type: 'get', to: roomJid.toString()})
                             .c('query', {xmlns: nsMucAdmin})
                             .c('item', {role})
@@ -340,14 +343,14 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     async sendMessage(room: Room, body: string, thread?: string): Promise<void> {
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const from = await this.xmppService.chatConnectionService.userJid$.pipe(first()).toPromise();
         const roomJid = room.jid.toString();
         const roomMessageBuilder = thread
-            ? this.xmppChatAdapter.chatConnectionService
+            ? this.xmppService.chatConnectionService
                 .$msg({from, to: roomJid, type: 'groupchat'})
                 .c('body', {}, body)
                 .up().c('thread', {}, thread)
-            : this.xmppChatAdapter.chatConnectionService
+            : this.xmppService.chatConnectionService
                 .$msg({from, to: roomJid, type: 'groupchat'})
                 .c('body', {}, body);
 
@@ -360,7 +363,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
      * https://xmpp.org/extensions/xep-0045.html#registrar-formtype-owner
      */
     async getRoomConfiguration(roomJid: JID): Promise<Form> {
-        const configurationForm = await this.xmppChatAdapter.chatConnectionService
+        const configurationForm = await this.xmppService.chatConnectionService
             .$iq({type: 'get', to: roomJid.toString()})
             .c('query', {xmlns: nsMucOwner})
             .sendAwaitingResponse();
@@ -404,7 +407,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
             setFieldValue(roomConfigForm, 'boolean', 'allow_subscription', roomConfiguration.allowSubscription);
         }
 
-        await this.xmppChatAdapter.chatConnectionService
+        await this.xmppService.chatConnectionService
             .$iq({type: 'set', to: roomJid.toString()})
             .c('query', {xmlns: nsMucOwner})
             .cCreateMethod(builder => serializeToSubmitForm(builder, roomConfigForm));
@@ -417,7 +420,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     async banUser(occupantJid: JID, roomJid: JID, reason?: string): Promise<IqResponseStanza> {
         const userJid = await this.getUserJidByOccupantJid(occupantJid, roomJid);
 
-        const response = await this.xmppChatAdapter.chatConnectionService
+        const response = await this.xmppService.chatConnectionService
             .$iq({to: roomJid.toString(), type: 'set'})
             .c('query', {xmlns: nsMucAdmin})
             .c('item', {jid: userJid.toString(), affiliation: Affiliation.outcast})
@@ -438,7 +441,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
             throw new Error(`error unbanning: ${userJid} isn't on the ban list`);
         }
 
-        const response = await this.xmppChatAdapter.chatConnectionService
+        const response = await this.xmppService.chatConnectionService
             .$iq({to: roomJid.toString(), type: 'set'})
             .c('query', {xmlns: nsMucAdmin})
             .c('item', {jid: userJid.toString(), affiliation: Affiliation.none})
@@ -449,7 +452,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     async getBanList(roomJid: JID): Promise<AffiliationModification[]> {
-        const response = await this.xmppChatAdapter.chatConnectionService
+        const response = await this.xmppService.chatConnectionService
             .$iq({to: roomJid.toString(), type: 'get'})
             .c('query', {xmlns: nsMucAdmin})
             .c('item', {affiliation: Affiliation.outcast})
@@ -463,8 +466,8 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     async inviteUser(inviteeJid: JID, roomJid: JID, invitationMessage?: string): Promise<void> {
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
-        await this.xmppChatAdapter.chatConnectionService
+        const from = await this.xmppService.chatConnectionService.userJid$.pipe(first()).toPromise();
+        await this.xmppService.chatConnectionService
             .$msg({to: roomJid.toString(), from})
             .c('x', {xmlns: nsMucUser})
             .c('invite', {to: inviteeJid.toString()})
@@ -474,9 +477,9 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
 
     async declineRoomInvite(occupantJid: JID, reason?: string) {
         const to = occupantJid.bare().toString();
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const from = await this.xmppService.chatConnectionService.userJid$.pipe(first()).toPromise();
 
-        await this.xmppChatAdapter.chatConnectionService
+        await this.xmppService.chatConnectionService
             .$msg({to, from})
             .c('x', {xmlns: nsMucUser})
             .c('decline', {to})
@@ -484,7 +487,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     async kickOccupant(nick: string, roomJid: JID, reason?: string): Promise<IqResponseStanza> {
-        const response = await this.xmppChatAdapter.chatConnectionService
+        const response = await this.xmppService.chatConnectionService
             .$iq({to: roomJid.toString(), type: 'set'})
             .c('query', {xmlns: nsMucAdmin})
             .c('item', {nick, role: Role.none})
@@ -497,17 +500,17 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     async changeUserNickname(newNick: string, roomJid: JID): Promise<void> {
         const newRoomJid = parseJid(roomJid.toString());
         newRoomJid.resource = newNick;
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const from = await this.xmppService.chatConnectionService.userJid$.pipe(first()).toPromise();
 
-        await this.xmppChatAdapter.chatConnectionService
+        await this.xmppService.chatConnectionService
             .$pres({to: newRoomJid.toString(), from})
             .send();
     }
 
     async leaveRoom(occupantJid: JID, status?: string): Promise<void> {
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const from = await this.xmppService.chatConnectionService.userJid$.pipe(first()).toPromise();
 
-        await this.xmppChatAdapter.chatConnectionService
+        await this.xmppService.chatConnectionService
             .$pres({to: occupantJid.toString(), from, type: Presence[Presence.unavailable]})
             .cCreateMethod(builder => status ? builder.c('status', {}, status) : builder)
             .send();
@@ -515,8 +518,8 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     async changeRoomSubject(roomJid: JID, subject: string): Promise<void> {
-        const from = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
-        await this.xmppChatAdapter.chatConnectionService
+        const from = await this.xmppService.chatConnectionService.userJid$.pipe(first()).toPromise();
+        await this.xmppService.chatConnectionService
             .$msg({to: roomJid.toString(), from, type: 'groupchat'})
             .c('subject', {}, subject)
             .send();
@@ -582,9 +585,9 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
 
         const statusCodes: string[] = Array.from(xEl.querySelectorAll('status')).map(status => status.getAttribute('code'));
         const isCurrentUser = statusCodes.includes(OtherStatusCode.PresenceSelfRef);
-        const createdRoom =  statusCodes.includes(EnteringRoomStatusCode.NewRoomCreated)
+        const createdRoom = statusCodes.includes(EnteringRoomStatusCode.NewRoomCreated);
 
-        if(isCurrentUser && createdRoom) {
+        if (isCurrentUser && createdRoom) {
             this.createdRoomSubject.next(new Room(occupantJid.bare(), this.logService));
             return true;
         }
@@ -660,11 +663,11 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
         if (await this.getRoomByJid(roomJid.bare()).toPromise()) {
             throw new Error('can not join room more than once: ' + roomJid.bare().toString());
         }
-        const userJid = await firstValueFrom(this.xmppChatAdapter.chatConnectionService.userJid$);
+        const userJid = await firstValueFrom(this.xmppService.chatConnectionService.userJid$);
         const occupantJid = parseJid(roomJid.local, roomJid.domain, roomJid.resource || userJid.split('@')[0]);
 
         try {
-            const presenceResponse = await this.xmppChatAdapter.chatConnectionService
+            const presenceResponse = await this.xmppService.chatConnectionService
                 .$pres({to: occupantJid.toString()})
                 .c('x', {xmlns: nsMuc})
                 .sendAwaitingResponse();
@@ -708,7 +711,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
             const datetime = stamp ? new Date(stamp) : new Date() /* TODO: replace with entity time plugin */;
 
             const from = parseJid(stanza.getAttribute('from'));
-            this.getRoomByJid(from.bare()).toPromise().then((room) => {
+            firstValueFrom(this.getRoomByJid(from.bare())).then((room) => {
                 if (!room) {
                     // there are several reasons why we can receive a message for an unknown room:
                     // - this is a message delivered via MAM/MUCSub but the room it was stored for
@@ -722,7 +725,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
                     // return false;
                 }
 
-                const message: RoomMessage = {
+                const message: Message = {
                     body: stanza.querySelector('body').textContent.trim(),
                     datetime,
                     id: stanza.getAttribute('id'),
@@ -733,6 +736,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
                 };
 
                 const messageReceivedEvent = new MessageReceivedEvent();
+                this.xmppService.plugins.messageState.afterReceiveMessage(message, stanza, messageReceivedEvent);
                 if (!messageReceivedEvent.discard) {
                     room.addMessage(message);
                 }
@@ -790,7 +794,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     private async setAffiliation(occupantJid: JID, roomJid: JID, affiliation: Affiliation, reason?: string): Promise<IqResponseStanza> {
         const userJid = await this.getUserJidByOccupantJid(occupantJid, roomJid);
 
-        return await this.xmppChatAdapter.chatConnectionService
+        return await this.xmppService.chatConnectionService
             .$iq({to: roomJid.toString(), type: 'set'})
             .c('query', {xmlns: nsMucAdmin})
             .c('item', {jid: userJid.toString(), affiliation})
@@ -799,7 +803,7 @@ export class MultiUserChatPlugin implements StanzaHandlerChatPlugin {
     }
 
     private async setRole(occupantNick: string, roomJid: JID, role: Role, reason?: string): Promise<IqResponseStanza> {
-        return await this.xmppChatAdapter.chatConnectionService
+        return await this.xmppService.chatConnectionService
             .$iq({to: roomJid.toString(), type: 'set'})
             .c('query', {xmlns: nsMucAdmin})
             .c('item', {nick: occupantNick, role})

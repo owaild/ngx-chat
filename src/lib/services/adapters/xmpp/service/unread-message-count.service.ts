@@ -59,7 +59,7 @@ export class UnreadMessageCountService {
             this.chatService.contactCreated$.pipe(map(contact => [contact])),
         ).subscribe(recipients => {
             for (const recipient of recipients) {
-                const jid = recipient.jidBare.toString();
+                const jid = recipient.jid.toString();
                 if (!this.recipientIdToMessageSubscription.has(jid)) {
                     const messages$: Subject<Message> = recipient.messages$;
                     const updateUnreadCountSubscription = messages$
@@ -92,7 +92,7 @@ export class UnreadMessageCountService {
 
     private async checkForUnreadCountChange(recipient: Recipient) {
         if (this.chatMessageListRegistry.isChatOpen(recipient)) {
-            this.jidToLastReadTimestamp.set(recipient.jidBare.toString(), await this.entityTimePlugin.getNow());
+            this.jidToLastReadTimestamp.set(recipient.jid.toString(), await this.entityTimePlugin.getNow());
             await this.persistLastSeenDates();
         }
         this.updateContactUnreadMessageState(recipient);
@@ -138,7 +138,7 @@ export class UnreadMessageCountService {
     }
 
     updateContactUnreadMessageState(recipient: Recipient) {
-        const contactJid = recipient.jidBare.toString();
+        const contactJid = recipient.jid.toString();
         const lastReadDate = this.jidToLastReadTimestamp.get(contactJid) || 0;
         const contactUnreadMessageCount = this.calculateUnreadMessageCount(recipient, lastReadDate);
         const jidToCount = this.jidToUnreadCount$.getValue();

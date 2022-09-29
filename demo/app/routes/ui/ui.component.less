@@ -10,15 +10,15 @@
   display: flex;
   flex-direction: column;
 
-  ngx-chat-message-simple {
+  ngx-chat-message-out, ngx-chat-message-in {
     max-width: 76%;
+  }
 
-    &.chat-message--in {
-      align-self: flex-start;
-    }
+  ngx-chat-message-in {
+    align-self: flex-start;
+  }
 
-    &.chat-message--out {
-      align-self: flex-end;
-    }
+  ngx-chat-message-out {
+    align-self: flex-end;
   }
 }

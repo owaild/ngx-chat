@@ -22,15 +22,19 @@ export interface ContactMetadata {
 
 export type JidToPresence = Map<string, Presence>;
 
-export class Contact {
+export function isContact(recipient: Recipient): recipient is Contact{
+    return recipient.recipientType === 'contact';
+}
+
+export class Contact implements Recipient {
 
     readonly recipientType = 'contact';
     avatar = dummyAvatarContact;
     metadata: ContactMetadata = {};
 
-    /** use {@link jidBare}, jid resource is only set for chat room contacts */
-    readonly jidFull: JID;
-    readonly jidBare: JID;
+    /** use {@link jid}, jid resource is only set for chat room contacts */
+    readonly jidWithResource: JID;
+    readonly jid: JID;
     readonly presence$ = new BehaviorSubject<Presence>(Presence.unavailable);
     readonly subscription$ = new BehaviorSubject<ContactSubscription>(ContactSubscription.none);
     readonly pendingOut$ = new BehaviorSubject(false);
@@ -81,8 +85,8 @@ export class Contact {
             this.avatar = avatar;
         }
         const jid = parseJid(jidPlain);
-        this.jidFull = jid;
-        this.jidBare = jid.bare();
+        this.jidWithResource = jid;
+        this.jid = jid.bare();
         this.messageStore = new MessageStore(logService);
     }
 
@@ -90,10 +94,10 @@ export class Contact {
         this.messageStore.addMessage(message);
     }
 
-    equalsBareJid(other: Recipient | JID): boolean {
+    equalsJid(other: Recipient | JID): boolean {
         if (other instanceof Contact || isJid(other)) {
-            const otherJid = other instanceof Contact ? other.jidBare : other.bare();
-            return this.jidBare.equals(otherJid);
+            const otherJid = other instanceof Contact ? other.jid : other.bare();
+            return this.jid.equals(otherJid);
         }
         return false;
     }

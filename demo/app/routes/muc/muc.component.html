@@ -67,8 +67,8 @@
         </ng-container>
         <ng-container *ngIf="selectedRoom$ | async as room">
             <h2>Chat:</h2>
-            <ngx-chat-message-list [recipient]="room"></ngx-chat-message-list>
-            <ngx-chat-message-input [recipient]="room"></ngx-chat-message-input>
+            <ngx-chat-history [recipient]="room"></ngx-chat-history>
+            <ngx-chat-window-input [recipient]="room"></ngx-chat-window-input>
         </ng-container>
     </main>
     <aside>

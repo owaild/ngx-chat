@@ -1,8 +1,22 @@
 import { JID } from '@xmpp/jid';
-import { Contact } from './contact';
-import { Room } from './room';
+import {DateMessagesGroup} from './message-store';
+import {Message} from './message';
+import {Subject} from 'rxjs';
 
-export type Recipient = Contact | Room;
+export interface Recipient {
+    recipientType: 'contact' | 'room';
+    avatar: string;
+    name: string
+    readonly jid: JID;
+    get messages$(): Subject<Message>;
+    get messages(): Message[];
+    get dateMessagesGroups(): DateMessagesGroup<Message>[];
+    get oldestMessage(): Message | undefined;
+    get mostRecentMessage(): Message | undefined;
+    get mostRecentMessageReceived(): Message | undefined;
+    get mostRecentMessageSent(): Message | undefined;
+    equalsJid(other: Recipient | JID): boolean;
+}
 
 export function isJid(o: any): o is JID {
     // due to unknown reasons, `o instanceof JID` does not work when

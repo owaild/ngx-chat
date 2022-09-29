@@ -31,7 +31,7 @@
 
 ### BREAKING CHANGES
 
-* replace ChatRoomMessagesComponent with ChatMessageListComponent. The contact property of ChatMessageListComponent has renamed the contact property to recipient. The usage is the same!
+* replace ChatRoomMessagesComponent with ChatHistoryComponent. The contact property of ChatHistoryComponent has renamed the contact property to recipient. The usage is the same!
 
 
 
@@ -58,7 +58,7 @@
 
 * currently joined rooms are now seen in the roster list
 * introduced Recipient. Contact and Room are Recipients, they get discriminated by the recipientType property
-* ChatMessageInputComponent gets a recipient instead of a contact or a room, you only have to change the input parameter to recipient
+* ChatWindowInputComponent gets a recipient instead of a contact or a room, you only have to change the input parameter to recipient
 * ChatService
   * sendMessage expects a Recipient instead of a JID, will now also send messages to Rooms, no need to send via MessagePlugin or MultiUserChatPlugin
   * ChatService.blockedContactIds$, xmppChatAdapter.blockedContactIds$ is now a Set

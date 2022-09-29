@@ -1,0 +1,31 @@
+<div class="chat-messages" #messageArea>
+
+    <div class="chat-messages-start" (ngxChatIntersectionObserver)="onTop$.next($event)"></div>
+
+    <ng-container *ngFor="let dateMessagesGroup of recipient.dateMessagesGroups">
+        <div class="chat-messages-date-group">{{dateMessagesGroup.date | date:chatService.translations.dateFormat:undefined:chatService.translations.locale}}</div>
+        <ng-container *ngFor="let message of dateMessagesGroup.messages">
+            <ng-container *ngIf="message.direction === Direction.in">
+                <ngx-chat-message-in [showAvatar]="showAvatars"
+                                     [message]="message"
+                                     [contact]="recipient">
+                </ngx-chat-message-in>
+            </ng-container>
+            <ng-container *ngIf="message.direction === Direction.out">
+                <ngx-chat-message-out [showAvatar]="showAvatars"
+                                      [message]="message"
+                                      [contact]="recipient">
+                </ngx-chat-message-out>
+            </ng-container>
+        </ng-container>
+    </ng-container>
+
+    <ngx-chat-message-empty *ngIf="recipient.messages.length === 0">
+    </ngx-chat-message-empty>
+
+    <ngx-chat-message-contact-request [recipient]="recipient"
+                                      (scheduleScrollToLastMessage$)="scheduleScrollToLastMessage()">
+    </ngx-chat-message-contact-request>
+    <div class="chat-messages-end" (ngxChatIntersectionObserver)="onBottom($event)"></div>
+
+</div>

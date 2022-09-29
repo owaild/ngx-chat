@@ -37,18 +37,14 @@ export class ChatListStateService {
         });
     }
 
-    private openChatCollapsed(recipient: Recipient) {
-        if (!this.isChatWithRecipientOpen(recipient)) {
-            const openChats = this.openChats$.getValue();
-            const chatWindow = new ChatWindowState(recipient, true);
-            const copyWithNewContact = [chatWindow].concat(openChats);
-            this.openChats$.next(copyWithNewContact);
+    public openChat(recipient: Recipient, collapsedWindow = false) {
+        if (this.isChatWithRecipientOpen(recipient)) {
+            return;
         }
-    }
-
-    public openChat(recipient: Recipient) {
-        this.openChatCollapsed(recipient);
-        this.findChatWindowStateByRecipient(recipient).isCollapsed = false;
+        const openChats = this.openChats$.getValue();
+        console.log('OpenChat with Recipient:', recipient)
+        const chatWindow = new ChatWindowState(recipient, collapsedWindow);
+        this.openChats$.next([chatWindow].concat(openChats));
     }
 
     public closeChat(recipient: Recipient) {
@@ -77,10 +73,10 @@ export class ChatListStateService {
 
     private findChatWindowStateIndexByRecipient(recipient: Recipient): number {
         return this.openChats$.getValue()
-            .findIndex((chatWindowState) => chatWindowState.recipient.equalsBareJid(recipient));
+            .findIndex((chatWindowState) => chatWindowState.recipient.equalsJid(recipient));
     }
 
     private findChatWindowStateByRecipient(recipient: Recipient): ChatWindowState | undefined {
-        return this.openChats$.getValue().find(chat => chat.recipient.equalsBareJid(recipient));
+        return this.openChats$.getValue().find(chat => chat.recipient.equalsJid(recipient));
     }
 }

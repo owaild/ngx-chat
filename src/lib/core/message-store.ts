@@ -4,6 +4,7 @@ import { Direction, Message } from './message';
 import { findLast, findSortedIndex, findSortedInsertionIndexLast, insertSortedLast } from './utils-array';
 import { extractDateStringFromDate } from './utils-date';
 
+// TODO: remove and replace with sort on messages$
 export interface DateMessagesGroup<T extends Message> {
     /** is equal to the date where one message on that date was received */
     date: Date;

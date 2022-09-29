@@ -5,6 +5,7 @@ import {MessageReceivedEvent} from './message.plugin';
 import {ChatPlugin} from '../../../../core/plugin';
 import {Finder} from '../shared/finder';
 import {first} from 'rxjs/operators';
+import {firstValueFrom} from 'rxjs';
 
 export const nsCarbons = 'urn:xmpp:carbons:2';
 export const nsForward = 'urn:xmpp:forward:0';
@@ -18,13 +19,15 @@ export class MessageCarbonsPlugin implements ChatPlugin {
 
     nameSpace = nsCarbons;
 
-    constructor(private readonly xmppChatAdapter: XmppService) {}
+    constructor(private readonly xmppService: XmppService) {
+        this.xmppService.onBeforeOnline$.subscribe(async () => await this.onBeforeOnline());
+    }
 
     /**
      * Ask the XMPP server to enable Message Carbons
      */
     async enableCarbons(): Promise<IqResponseStanza> {
-       return await this.xmppChatAdapter.chatConnectionService
+       return await this.xmppService.chatConnectionService
             .$iq({type: 'set'})
             .c('enable', {xmlns: nsCarbons})
             .sendAwaitingResponse();
@@ -39,7 +42,7 @@ export class MessageCarbonsPlugin implements ChatPlugin {
         const forwarded = Finder.create(receivedOrSentElement).searchByTag('forwarded').searchByNamespace(nsForward);
         const messageElement = forwarded.searchByTag('message').searchByNamespace('jabber:client').result;
         const carbonFrom = stanza.getAttribute('from');
-        const userJid = await this.xmppChatAdapter.chatConnectionService.userJid$.pipe(first()).toPromise();
+        const userJid = await firstValueFrom(this.xmppService.chatConnectionService.userJid$);
         if (stanza.tagName === 'message' && receivedOrSentElement && messageElement && userJid === carbonFrom) {
             return this.handleCarbonMessageStanza(messageElement, receivedOrSentElement);
         }
@@ -60,16 +63,18 @@ export class MessageCarbonsPlugin implements ChatPlugin {
         };
 
         const messageReceivedEvent = new MessageReceivedEvent();
+        this.xmppService.plugins.messageState.afterReceiveMessage(message, messageElement, messageReceivedEvent)
         if (!messageReceivedEvent.discard) {
             const from = messageElement.getAttribute('from');
             const to = messageElement.getAttribute('to');
             const contactJid = direction === Direction.in ? from : to;
-            const contact = this.xmppChatAdapter.getOrCreateContactByIdSync(contactJid);
-            contact.addMessage(message);
+            this.xmppService.getOrCreateContactById(contactJid).then((contact) => {
+                contact.addMessage(message);
 
-            if (direction === Direction.in) {
-                this.xmppChatAdapter.message$.next(contact);
-            }
+                if (direction === Direction.in) {
+                    this.xmppService.message$.next(contact);
+                }
+            });
         }
 
         return true;

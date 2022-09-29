@@ -10,7 +10,7 @@ import {
 } from '@pazznetwork/ngx-chat';
 import {jid} from '@xmpp/jid';
 import {NgModel} from '@angular/forms';
-import {MUC_SUB_EVENT_TYPE, RoomOccupant} from 'src/public-api';
+import {MUC_SUB_EVENT_TYPE, Recipient, RoomOccupant} from 'src/public-api';
 
 @Component({
     selector: 'app-multi-user-chat',
@@ -22,7 +22,7 @@ export class MultiUserChatComponent {
     @ViewChild('occupantJidInput') occupantJidInput: NgModel;
     occupantJidText: string;
     occupantJid: JID | null = null;
-    selectedRoom: Room;
+    selectedRoom: Recipient;
     allRooms: Room[] = [];
     roomUserList: RoomOccupant[] = [];
     newRoom?: RoomCreationOptions;
@@ -116,16 +116,16 @@ export class MultiUserChatComponent {
 
     async kick(member: RoomOccupant) {
         const {nick} = this.findIdWithNick(member);
-        await this.chatService.kickOccupant(nick, this.selectedRoom.jidBare);
+        await this.chatService.kickOccupant(nick, this.selectedRoom.jid);
     }
 
     async banOrUnban(member: RoomOccupant) {
         const memberJid = member.jid.bare();
         if (member.affiliation === Affiliation.outcast) {
-            await this.chatService.unbanUserForRoom(memberJid, this.selectedRoom.jidBare);
+            await this.chatService.unbanUserForRoom(memberJid, this.selectedRoom.jid);
             return;
         }
-        await this.chatService.banUserForRoom(memberJid, this.selectedRoom.jidBare);
+        await this.chatService.banUserForRoom(memberJid, this.selectedRoom.jid);
     }
 
     async leaveRoom(roomJid: JID) {

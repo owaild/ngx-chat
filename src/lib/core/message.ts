@@ -1,3 +1,5 @@
+import {JID} from '@xmpp/jid';
+
 export enum MessageState {
     /**
      * Not yet sent
@@ -28,10 +30,12 @@ export enum MessageState {
 }
 
 export interface Message {
+    id?: string;
+    // for rooms
+    from?: JID;
     direction: Direction;
     body: string;
     datetime: Date;
-    id?: string;
     delayed: boolean;
     fromArchive: boolean;
     /**

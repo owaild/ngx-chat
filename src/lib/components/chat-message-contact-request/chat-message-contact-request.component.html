@@ -1,0 +1,38 @@
+<ngx-chat-bubble *ngIf="isShown">
+    <ng-container ngProjectAs="ngx-chat-message-text-area">
+        <span>{{getMessage()}}</span>
+        <ul class="chat-presence-subscription-actions">
+            <li>
+                <a data-zid="accept-user"
+                   *ngIf="isActionShown()"
+                   [class.action-disabled]="isActionDisabled()"
+                   (click)="acceptSubscriptionRequest($event)"
+                   href="#"
+                >{{chatService.translations.acceptSubscriptionRequest}}</a>
+            </li>
+
+            <li>
+                <a data-zid="deny-user"
+                   *ngIf="isActionShown()"
+                   [class.action-disabled]="isActionDisabled()"
+                   (click)="denySubscriptionRequest($event)"
+                   href="#"
+                >{{chatService.translations.denySubscriptionRequest}}</a>
+            </li>
+        </ul>
+        <ul class="deny-actions"
+            *ngIf="showDenyActions()">
+            <li>
+                <a data-zid="block-user" (click)="blockContact($event)" href="#">{{chatService.translations.block}}</a>
+            </li>
+            <li *ngIf="reportUserService">
+                <a data-zid="block-and-report-user" (click)="blockContactAndReport($event)"
+                   href="#">{{chatService.translations.blockAndReport}}</a>
+            </li>
+            <li>
+                <a data-zid="dismiss-block-message" (click)="dismissBlockOptions($event)"
+                   href="#">{{chatService.translations.dismiss}}</a>
+            </li>
+        </ul>
+    </ng-container>
+</ngx-chat-bubble>

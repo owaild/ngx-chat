@@ -1,3 +1,4 @@
+// @ts-ignore
 import {Element as XmppElement} from '@xmpp/xml';
 import {Builder} from './interface/builder';
 
