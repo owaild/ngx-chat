@@ -73,19 +73,20 @@ export class XmppServiceModule {
 
     static configureTestingModule() {
         TestBed.configureTestingModule({
-            providers: [
-                ChatMessageListRegistryService,
-                ContactFactoryService,
-                {provide: HttpHandler, useClass: HttpBackend},
-                HttpClient,
-                LogService,
-                {provide: CHAT_CONNECTION_FACTORY_TOKEN, useClass: StropheChatConnectionFactory},
-                {provide: CHAT_SERVICE_TOKEN, useClass: XmppService},
-                {provide: LogService, useValue: testLogService()},
-                ContactFactoryService,
-            ],
-            imports: [HttpClientModule]
-        });
+    providers: [
+        ChatMessageListRegistryService,
+        ContactFactoryService,
+        { provide: HttpHandler, useClass: HttpBackend },
+        HttpClient,
+        LogService,
+        { provide: CHAT_CONNECTION_FACTORY_TOKEN, useClass: StropheChatConnectionFactory },
+        { provide: CHAT_SERVICE_TOKEN, useClass: XmppService },
+        { provide: LogService, useValue: testLogService() },
+        ContactFactoryService,
+    ],
+    imports: [HttpClientModule],
+    teardown: { destroyAfterEach: false }
+});
         return {
             xmppService: TestBed.inject(CHAT_SERVICE_TOKEN) as XmppService,
             ejabberdClient: new EjabberdClient(),
