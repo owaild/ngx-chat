@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { filter } from 'rxjs/operators';
-import { Recipient } from '../../core/recipient';
+import { Recipient } from '../adapters/xmpp/core/recipient';
 import { CHAT_SERVICE_TOKEN, ChatService } from '../adapters/xmpp/interface/chat.service';
 
 export class ChatWindowState {

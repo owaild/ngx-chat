@@ -1,10 +1,10 @@
 import {Subject} from 'rxjs';
-import {Stanza} from '../../../../core/stanza';
+import {Stanza} from '../core/stanza';
 import {XmppResponseError} from '../shared/xmpp-response.error';
 import {XmppService} from '../../xmpp.service';
-import {Form, serializeToSubmitForm} from '../../../../core/form';
+import {Form, serializeToSubmitForm} from '../core/form';
 import {Builder} from '../interface/builder';
-import {StanzaHandlerChatPlugin} from '../../../../core/plugin';
+import {StanzaHandlerChatPlugin} from '../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 
 export const nsPubSub = 'http://jabber.org/protocol/pubsub';

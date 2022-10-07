@@ -1,7 +1,7 @@
 import {Component, Inject, Input, ViewChild} from '@angular/core';
 import {FILE_UPLOAD_HANDLER_TOKEN, FileUploadHandler} from '../../hooks/file-upload-handler';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
-import {Recipient} from '../../core/recipient';
+import {Recipient} from '../../services/adapters/xmpp/core/recipient';
 import {ChatWindowInputComponent} from '../chat-window-input/chat-window-input.component';
 import {ChatHistoryComponent} from '../chat-history/chat-history.component';
 

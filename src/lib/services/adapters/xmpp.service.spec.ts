@@ -1,14 +1,15 @@
 import {first, take} from 'rxjs/operators';
-import {Contact} from '../../core/contact';
-import {Direction} from '../../core/message';
+import {Contact} from './xmpp/core/contact';
+import {Direction} from './xmpp/core/message';
 import {XmppService} from './xmpp.service';
 import {XmppServiceModule} from './xmpp.service.module';
 import {EjabberdClient} from '../../test/ejabberd-client';
+import {ContactFactoryService} from './xmpp/service/contact-factory.service';
 
 describe('XmppChatAdapter', () => {
     let chatService: XmppService;
     let client: EjabberdClient;
-    let contactFactory;
+    let contactFactory: ContactFactoryService;
 
     let contact1: Contact;
     let contact2: Contact;

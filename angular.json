@@ -13,10 +13,6 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "allowedCommonJsDependencies": [
-              "@xmpp/jid",
-              "@xmpp/client"
-            ],
             "outputPath": "dist/ngx-chat-demo",
             "index": "demo/index.html",
             "main": "demo/main.ts",
@@ -73,15 +69,6 @@
           "configurations": {
             "production": {
               "browserTarget": "ngx-chat-demo:build:production"
-            },
-            "jsxc": {
-              "browserTarget": "ngx-chat-demo:build:jsxc"
-            },
-            "converse": {
-              "browserTarget": "ngx-chat-demo:build:converse"
-            },
-            "pazz": {
-              "browserTarget": "ngx-chat-demo:build:pazz"
             }
           }
         }
@@ -112,9 +99,26 @@
             "tsConfig": "tsconfig.spec.json",
             "karmaConfig": "karma.conf.js"
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+          }
         }
       }
     }
   },
-  "defaultProject": "ngx-chat-demo"
+  "schematics": {
+    "@schematics/angular:component": {
+      "prefix": "ngx",
+      "style": "less"
+    },
+    "@schematics/angular:directive": {
+      "prefix": "ngx"
+    }
+  },
+  "cli": {
+    "analytics": false
+  }
 }

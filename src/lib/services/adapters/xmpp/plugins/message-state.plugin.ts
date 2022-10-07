@@ -1,8 +1,6 @@
-import {jid as parseJid} from '@xmpp/client';
-import {JID} from '@xmpp/jid';
 import {filter} from 'rxjs/operators';
-import {Direction, Message, MessageState} from '../../../../core/message';
-import {MessageWithBodyStanza, Stanza} from '../../../../core/stanza';
+import {Direction, Message, MessageState} from '../core/message';
+import {MessageWithBodyStanza, Stanza} from '../core/stanza';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
@@ -10,9 +8,10 @@ import {EntityTimePlugin} from './entity-time.plugin';
 import {MessageUuidPlugin} from './message-uuid.plugin';
 import {MessageReceivedEvent} from './message.plugin';
 import {PublishSubscribePlugin} from './publish-subscribe.plugin';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {Builder} from '../interface/builder';
 import {combineLatest, firstValueFrom} from 'rxjs';
+import {JID, parseJid } from '../core/jid';
 
 export interface StateDate {
     lastRecipientReceived: Date;

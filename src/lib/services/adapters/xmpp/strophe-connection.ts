@@ -1,9 +1,7 @@
-import debounce from 'lodash-es/debounce';
-import compact from 'lodash-es/compact';
-import {Strophe} from 'strophe.js';
 import {LogService} from './service/log.service';
-import {Observable, Subject} from 'rxjs';
-import {takeUntil} from 'rxjs/operators';
+import {firstValueFrom, from, Observable, Subject} from 'rxjs';
+import {debounceTime, takeUntil} from 'rxjs/operators';
+import {BOSH_WAIT, Connection, ErrorCondition, getDomainFromJid, PromiseWrapper, Status, StropheWebsocket} from '@pazznetwork/strophets';
 
 export enum AuthenticationMode {
     LOGIN,
@@ -12,12 +10,28 @@ export enum AuthenticationMode {
     EXTERNAL,
 }
 
+interface StropheConnectionSettings {
+    discoverConnectionMethods: boolean,
+    authenticationMode: AuthenticationMode,
+    clearCacheOnLogout: boolean,
+    connectionOptions: { worker: ServiceWorker },
+    automaticLogin: boolean,
+    password: string,
+    credentialsUrl: string,
+    prebindUrl: string,
+}
+
+interface Credentials {
+    password: string,
+    jid: string
+}
+
 /**
  * The Connection class manages the connection to the XMPP server. It's
  * agnostic concerning the underlying protocol (i.e. websocket, long-polling
  * via BOSH or websocket inside a shared worker).
  */
-export class StropheConnection extends Strophe.Connection {
+export class StropheConnection extends Connection {
 
     jid: string;
 
@@ -40,7 +54,7 @@ export class StropheConnection extends Strophe.Connection {
 
     private reconnecting = false;
 
-    private connectionStatus: { status: Strophe.Status, message: string };
+    private connectionStatus: { status: Status, message: string };
 
     private session: Record<string, unknown>;
     private bareJid: string;
@@ -49,14 +63,14 @@ export class StropheConnection extends Strophe.Connection {
     private websocketUrl: string;
     private boshServiceUrl: string;
 
-    private disconnectionCause: Strophe.Status;
+    private disconnectionCause: Status;
     private disconnectionReason: string;
     private send_initial_presence: boolean;
 
 
     private constructor(
         private readonly logService: LogService,
-        private readonly settings = {
+        private readonly settings: StropheConnectionSettings = {
             discoverConnectionMethods: true,
             authenticationMode: AuthenticationMode.LOGIN,
             clearCacheOnLogout: true,
@@ -115,11 +129,11 @@ export class StropheConnection extends Strophe.Connection {
 
 
         password = password ?? this.settings.password;
-        const credentials = (jid && password) ? {jid, password} : null;
+        const credentials: Credentials = (jid && password) ? {jid, password} : null;
         await this.attemptNonPreboundSession(credentials, automatic);
     }
 
-    async attemptNonPreboundSession(credentials?, automatic = false) {
+    async attemptNonPreboundSession(credentials?: Credentials, automatic = false) {
         if (this.settings.authenticationMode === AuthenticationMode.LOGIN) {
             // XXX: If EITHER ``keepalive`` or ``auto_login`` is ``true`` and
             // ``authentication`` is set to ``login``, then Converse will try to log the user in,
@@ -159,16 +173,16 @@ export class StropheConnection extends Strophe.Connection {
         return null;
     }
 
-    private static isValidJID(jid) {
+    private static isValidJID(jid: string) {
         if (typeof jid === 'string') {
-            return compact(jid.split('@')).length === 2 && !jid.startsWith('@') && !jid.endsWith('@');
+            return jid.trim().split('@').length === 2 && !jid.startsWith('@') && !jid.endsWith('@');
         }
         return false;
     };
 
-    fetchLoginCredentialsInterceptor = async (xhr) => xhr;
+    fetchLoginCredentialsInterceptor = async (xhr: XMLHttpRequest) => xhr;
 
-    async getLoginCredentials(credentialsURL: string) {
+    async getLoginCredentials(credentialsURL: string): Promise<Credentials> {
         let credentials;
         let wait = 0;
         while (!credentials) {
@@ -185,37 +199,38 @@ export class StropheConnection extends Strophe.Connection {
         return credentials;
     }
 
-    async fetchLoginCredentials(wait = 0, credentialsURL: string) {
-        return new Promise(
-            debounce(async (resolve, reject) => {
-                let xhr = new XMLHttpRequest();
-                xhr.open('GET', credentialsURL, true);
-                xhr.setRequestHeader('Accept', 'application/json, text/javascript');
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 400) {
-                        const data = JSON.parse(xhr.responseText);
-                        this.setUserJID(data.jid).then(() => {
-                            resolve({
-                                jid: data.jid,
-                                password: data.password
+    async fetchLoginCredentials(wait = 0, credentialsURL: string): Promise<Credentials> {
+        return firstValueFrom(
+            from<Promise<Credentials>>(
+                new Promise(async (resolve, reject) => {
+                    let xhr = new XMLHttpRequest();
+                    xhr.open('GET', credentialsURL, true);
+                    xhr.setRequestHeader('Accept', 'application/json, text/javascript');
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 400) {
+                            const data = JSON.parse(xhr.responseText);
+                            this.setUserJID(data.jid).then(() => {
+                                resolve({
+                                    jid: data.jid,
+                                    password: data.password
+                                });
                             });
-                        });
-                    } else {
-                        reject(new Error(`${xhr.status}: ${xhr.responseText}`));
-                    }
-                };
-                xhr.onerror = reject;
-                /**
-                 * *Hook* which allows modifying the server request
-                 * @event _converse#beforeFetchLoginCredentials
-                 */
-                xhr = await this.fetchLoginCredentialsInterceptor(xhr);
-                xhr.send();
-            }, wait));
+                        } else {
+                            reject(new Error(`${xhr.status}: ${xhr.responseText}`));
+                        }
+                    };
+                    xhr.onerror = reject;
+                    /**
+                     * *Hook* which allows modifying the server request
+                     * @event _converse#beforeFetchLoginCredentials
+                     */
+                    xhr = await this.fetchLoginCredentialsInterceptor(xhr);
+                    xhr.send();
+                })).pipe(debounceTime(wait)));
     }
 
 
-    async connectNonPreboundSession(credentials?) {
+    async connectNonPreboundSession(credentials?: Credentials) {
         if ([AuthenticationMode.ANONYMOUS, AuthenticationMode.EXTERNAL].includes(this.settings.authenticationMode)) {
             if (!this.jid) {
                 throw new Error('Config Error: when using anonymous login ' +
@@ -234,7 +249,7 @@ export class StropheConnection extends Strophe.Connection {
                     throw new Error('autoLogin: If you use auto_login and ' +
                         'authentication=\'login\' then you also need to provide a password.');
                 }
-                this.setDisconnectionCause(Strophe.Status.AUTHFAIL, undefined, true);
+                this.setDisconnectionCause(Status.AUTHFAIL, undefined, true);
                 super.disconnect('');
                 return;
             }
@@ -254,7 +269,7 @@ export class StropheConnection extends Strophe.Connection {
             domain?: string
         },
         authenticationMode = AuthenticationMode.LOGIN
-    ): Promise<Strophe.Connection> {
+    ): Promise<Connection> {
         const {boshServiceUrl, websocketUrl, domain} = connectionUrls;
 
         if (!boshServiceUrl && authenticationMode === AuthenticationMode.PREBIND) {
@@ -298,7 +313,7 @@ export class StropheConnection extends Strophe.Connection {
     }
 
 
-    async onDomainDiscovered(response) {
+    async onDomainDiscovered(response: globalThis.Response) {
         const text = await response.text();
         const xrd = (new window.DOMParser()).parseFromString(text, 'text/xml').firstElementChild;
         if (xrd.nodeName != 'XRD' || xrd.getAttribute('xmlns') != 'http://docs.oasis-open.org/ns/xri/xrd-1.0') {
@@ -335,7 +350,7 @@ export class StropheConnection extends Strophe.Connection {
             }
         };
         const url = `https://${domain}/.well-known/host-meta`;
-        let response;
+        let response: globalThis.Response;
         try {
             response = await fetch(url, options);
         } catch (e) {
@@ -360,7 +375,7 @@ export class StropheConnection extends Strophe.Connection {
      */
     async connect(jid: string, password: string, callback = this.onConnectStatusChanged.bind(this)) {
         if (this.settings.discoverConnectionMethods) {
-            const domain = Strophe.getDomainFromJid(jid);
+            const domain = getDomainFromJid(jid);
             await this.discoverConnectionMethods(domain);
         }
         if (!this.boshServiceUrl && !this.websocketUrl) {
@@ -384,7 +399,7 @@ export class StropheConnection extends Strophe.Connection {
         if (this.isType('websocket') && this.boshServiceUrl) {
             await this.setUserJID(this.bareJid);
             Object.getPrototypeOf(this)._doDisconnect();
-            Object.setPrototypeOf(this, new Strophe.Bosh(this));
+            Object.setPrototypeOf(this, new Bosh(this, null));
             this.service = this.boshServiceUrl;
         } else if (this.isType('bosh') && this.websocketUrl) {
             if (this.settings.authenticationMode === AuthenticationMode.ANONYMOUS) {
@@ -396,7 +411,7 @@ export class StropheConnection extends Strophe.Connection {
                 await this.setUserJID(this.bareJid);
             }
             Object.getPrototypeOf(this)._doDisconnect();
-            Object.setPrototypeOf(this, new Strophe.Websocket(this));
+            Object.setPrototypeOf(this, new StropheWebsocket(this));
             this.service = this.websocketUrl;
         }
     }
@@ -407,9 +422,9 @@ export class StropheConnection extends Strophe.Connection {
 
         const isAuthenticationAnonymous = this.settings.authenticationMode === AuthenticationMode.ANONYMOUS;
 
-        if (this.connectionStatus.status === Strophe.Status.CONNFAIL) {
+        if (this.connectionStatus.status === Status.CONNFAIL) {
             await this.switchTransport();
-        } else if (this.connectionStatus.status === Strophe.Status.AUTHFAIL && isAuthenticationAnonymous) {
+        } else if (this.connectionStatus.status === Status.AUTHFAIL && isAuthenticationAnonymous) {
             // When reconnecting anonymously, we need to connect with only
             // the domain, not the full JID that we had in our previous
             // (now failed) session.
@@ -417,7 +432,7 @@ export class StropheConnection extends Strophe.Connection {
         }
 
         this.setConnectionStatus(
-            Strophe.Status.RECONNECTING,
+            Status.RECONNECTING,
             'The connection has dropped, attempting to reconnect.'
         );
         /**
@@ -468,7 +483,7 @@ export class StropheConnection extends Strophe.Connection {
      * Used to keep track of why we got disconnected, so that we can
      * decide on what the next appropriate action is (in onDisconnected)
      * @method Connection.setDisconnectionCause
-     * @param {number} cause - The status number as received from Strophe.
+     * @param {number} cause - The status number as received from
      * @param {string} [reason] - An optional user-facing message as to why
      *  there was a disconnection.
      * @param {boolean} [override] - An optional flag to replace any previous
@@ -484,7 +499,7 @@ export class StropheConnection extends Strophe.Connection {
         }
     }
 
-    setConnectionStatus(status: Strophe.Status, message: string) {
+    setConnectionStatus(status: Status, message: string) {
         super.status = status;
         this.connectionStatus = {status, message};
     }
@@ -502,7 +517,7 @@ export class StropheConnection extends Strophe.Connection {
     }
 
     /**
-     * Gets called once strophe's status reaches Strophe.Status.DISCONNECTED.
+     * Gets called once strophe's status reaches Status.DISCONNECTED.
      * Will either start a teardown process for converse.js or attempt
      * to reconnect.
      * @method onDisconnected
@@ -510,7 +525,7 @@ export class StropheConnection extends Strophe.Connection {
     async onDisconnected() {
         if (this.settings.automaticLogin) {
             const reason = this.disconnectionReason;
-            if (this.disconnectionCause === Strophe.Status.AUTHFAIL) {
+            if (this.disconnectionCause === Status.AUTHFAIL) {
                 if (this.settings.credentialsUrl || this.settings.authenticationMode === AuthenticationMode.ANONYMOUS) {
                     // If `credentials_url` is set, we reconnect, because we might
                     // be receiving expirable tokens from the credentials_url.
@@ -522,18 +537,18 @@ export class StropheConnection extends Strophe.Connection {
                 } else {
                     return this.finishDisconnection();
                 }
-            } else if (this.connectionStatus.status === Strophe.Status.CONNECTING) {
+            } else if (this.connectionStatus.status === Status.CONNECTING) {
                 // Don't try to reconnect if we were never connected to begin
                 // with, otherwise an infinite loop can occur (e.g. when the
                 // BOSH service URL returns a 404).
                 this.setConnectionStatus(
-                    Strophe.Status.CONNFAIL,
+                    Status.CONNFAIL,
                     'An error occurred while connecting to the chat server.'
                 );
                 return this.finishDisconnection();
             } else if (
-                this.disconnectionCause === Strophe.Status.DISCONNECTING ||
-                reason === Strophe.ErrorCondition.NO_AUTH_MECH ||
+                this.disconnectionCause === Status.DISCONNECTING ||
+                reason === ErrorCondition.NO_AUTH_MECH ||
                 reason === 'host-unknown' ||
                 reason === 'remote-connection-failed'
             ) {
@@ -546,17 +561,17 @@ export class StropheConnection extends Strophe.Connection {
     }
 
     private readonly CONNECTION_STATUS = {
-        [Strophe.Status.ATTACHED]: 'ATTACHED',
-        [Strophe.Status.AUTHENTICATING]: 'AUTHENTICATING',
-        [Strophe.Status.AUTHFAIL]: 'AUTHFAIL',
-        [Strophe.Status.CONNECTED]: 'CONNECTED',
-        [Strophe.Status.CONNECTING]: 'CONNECTING',
-        [Strophe.Status.CONNFAIL]: 'CONNFAIL',
-        [Strophe.Status.DISCONNECTED]: 'DISCONNECTED',
-        [Strophe.Status.DISCONNECTING]: 'DISCONNECTING',
-        [Strophe.Status.ERROR]: 'ERROR',
-        [Strophe.Status.RECONNECTING]: 'RECONNECTING',
-        [Strophe.Status.REDIRECT]: 'REDIRECT',
+        [Status.ATTACHED]: 'ATTACHED',
+        [Status.AUTHENTICATING]: 'AUTHENTICATING',
+        [Status.AUTHFAIL]: 'AUTHFAIL',
+        [Status.CONNECTED]: 'CONNECTED',
+        [Status.CONNECTING]: 'CONNECTING',
+        [Status.CONNFAIL]: 'CONNFAIL',
+        [Status.DISCONNECTED]: 'DISCONNECTED',
+        [Status.DISCONNECTING]: 'DISCONNECTING',
+        [Status.ERROR]: 'ERROR',
+        [Status.RECONNECTING]: 'RECONNECTING',
+        [Status.REDIRECT]: 'REDIRECT',
     };
 
     // TODO: Ensure can be replaced by strophe-connection.service then delete
@@ -567,14 +582,14 @@ export class StropheConnection extends Strophe.Connection {
      * @param {number} status
      * @param {string} message
      */
-    async onConnectStatusChanged(status: Strophe.Status, message: string) {
+    async onConnectStatusChanged(status: Status, message: string) {
         this.logService.debug(`Status changed to: ${this.CONNECTION_STATUS[status]}`);
-        if (status === Strophe.Status.ATTACHFAIL) {
+        if (status === Status.ATTACHFAIL) {
             this.setConnectionStatus(status, message);
             super.worker_attach_promise?.resolve(false);
 
-        } else if (status === Strophe.Status.CONNECTED || status === Strophe.Status.ATTACHED) {
-            if (super.worker_attach_promise?.isResolved && this.connectionStatus.status === Strophe.Status.ATTACHED) {
+        } else if (status === Status.CONNECTED || status === Status.ATTACHED) {
+            if (super.worker_attach_promise?.isResolved && this.connectionStatus.status === Status.ATTACHED) {
                 // A different tab must have attached, so nothing to do for us here.
                 return;
             }
@@ -585,10 +600,10 @@ export class StropheConnection extends Strophe.Connection {
             this.send_initial_presence = true;
             this.setDisconnectionCause(undefined);
             if (this.reconnecting) {
-                this.logService.debug(status === Strophe.Status.CONNECTED ? 'Reconnected' : 'Reattached');
+                this.logService.debug(status === Status.CONNECTED ? 'Reconnected' : 'Reattached');
                 await this.onConnected(true);
             } else {
-                this.logService.debug(status === Strophe.Status.CONNECTED ? 'Connected' : 'Attached');
+                this.logService.debug(status === Status.CONNECTED ? 'Connected' : 'Attached');
                 if (this.restored) {
                     // No need to send an initial presence stanza when
                     // we're restoring an existing session.
@@ -596,52 +611,53 @@ export class StropheConnection extends Strophe.Connection {
                 }
                 await this.onConnected(false);
             }
-        } else if (status === Strophe.Status.DISCONNECTED) {
+        } else if (status === Status.DISCONNECTED) {
             this.setDisconnectionCause(status, message);
             await this.onDisconnected();
-        } else if (status === Strophe.Status.BINDREQUIRED) {
+        } else if (status === Status.BINDREQUIRED) {
             super.bind();
-        } else if (status === Strophe.Status.ERROR) {
+        } else if (status === Status.ERROR) {
             this.setConnectionStatus(
                 status,
                 'An error occurred while connecting to the chat server.'
             );
-        } else if (status === Strophe.Status.CONNECTING) {
+        } else if (status === Status.CONNECTING) {
             this.setConnectionStatus(status, message);
-        } else if (status === Strophe.Status.AUTHENTICATING) {
+        } else if (status === Status.AUTHENTICATING) {
             this.setConnectionStatus(status, message);
-        } else if (status === Strophe.Status.AUTHFAIL) {
+        } else if (status === Status.AUTHFAIL) {
             if (!message) {
                 message = 'Your XMPP address and/or password is incorrect. Please try again.';
             }
             this.setConnectionStatus(status, message);
             this.setDisconnectionCause(status, message, true);
             await this.onDisconnected();
-        } else if (status === Strophe.Status.CONNFAIL) {
+        } else if (status === Status.CONNFAIL) {
             let feedback = message;
             if (message === 'host-unknown' || message == 'remote-connection-failed') {
                 feedback = 'Sorry, we could not connect to the XMPP host with domain: ' + this.domainJid;
-            } else if (message !== undefined && message === Strophe?.ErrorCondition?.NO_AUTH_MECH) {
+            } else if (message !== undefined && message === ErrorCondition?.NO_AUTH_MECH) {
                 feedback = 'The XMPP server did not offer a supported authentication mechanism';
             }
             this.setConnectionStatus(status, feedback);
             this.setDisconnectionCause(status, message);
-        } else if (status === Strophe.Status.DISCONNECTING) {
+        } else if (status === Status.DISCONNECTING) {
             this.setDisconnectionCause(status, message);
         }
     }
 
-    isType(type) {
-        if (type.toLowerCase() === 'websocket') {
-            return Object.getPrototypeOf(this) instanceof Strophe.Websocket;
-        } else if (type.toLowerCase() === 'bosh') {
-            return Strophe.Bosh && Object.getPrototypeOf(this) instanceof Strophe.Bosh;
+    isType(typeString: string) {
+        if (typeString.toLowerCase() === 'websocket') {
+            return Object.getPrototypeOf(this) instanceof StropheWebsocket;
+        } else if (typeString.toLowerCase() === 'bosh') {
+            return Bosh && Object.getPrototypeOf(this) instanceof Bosh;
         } else {
             return false;
         }
     }
 
     restoreWorkerSession() {
+        // @ts-ignore
         super.attach(this.onConnectStatusChanged.bind(this));
         super.worker_attach_promise = getOpenPromise();
         return super.worker_attach_promise;
@@ -678,7 +694,7 @@ export class StropheConnection extends Strophe.Connection {
 
 
 export function getOpenPromise<T>() {
-    let wrapper: Strophe.PromiseWrapper<T>;
+    let wrapper: PromiseWrapper<T>;
     const promise = Object.assign(new Promise<T>((resolve, reject) => {
         wrapper = {
             isResolved: false,
@@ -731,9 +747,9 @@ class Bosh {
 
     async restoreBOSHSession() {
         const jid = (await this.initBOSHSession());
-        if (jid && (Object.getPrototypeOf(this.connection) instanceof Strophe.Bosh)) {
+        if (jid && (Object.getPrototypeOf(this.connection) instanceof Bosh)) {
             try {
-                (this.connection as Strophe.Connection).restore(jid, this.connection.onConnectStatusChanged.bind(this));
+                (this.connection as Connection).restore(jid, this.connection.onConnectStatusChanged.bind(this));
                 return true;
             } catch (e) {
                 return false;
@@ -764,7 +780,7 @@ class Bosh {
             if (xhr.status >= 200 && xhr.status < 400) {
                 const data = JSON.parse(xhr.responseText);
                 const jid = await this.connection.setUserJID(data.jid);
-                (this.connection as Strophe.Connection).attach(
+                (this.connection as Connection).attach(
                     jid,
                     data.sid,
                     data.rid,

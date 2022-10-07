@@ -1,6 +1,6 @@
-import {Stanza} from '../../../../core/stanza';
+import {Stanza} from '../core/stanza';
 import {XmppService} from '../../xmpp.service';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 
 /**

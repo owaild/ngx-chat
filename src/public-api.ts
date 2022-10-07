@@ -2,8 +2,7 @@
  * Public API Surface of ngx-chat
  */
 
-export { jid as parseJid } from '@xmpp/client';
-export { JID } from '@xmpp/jid';
+
 export * from './lib/components/chat-avatar/chat-avatar.component';
 export * from './lib/components/chat-avatar/chat-avatar.module';
 export * from './lib/components/chat-bar-windows/chat-bar-windows.component';
@@ -52,19 +51,19 @@ export * from './lib/components/roster-list/roster-list.component';
 export * from './lib/components/roster-list/roster-list.module';
 export * from './lib/components/roster-recipient/roster-recipient.component';
 export * from './lib/components/roster-recipient/roster-recipient.module';
-export * from './lib/core/contact';
+export * from './lib/services/adapters/xmpp/core/contact';
 export * from './lib/core/contact-avatar';
-export * from './lib/core/form';
+export * from './lib/services/adapters/xmpp/core/form';
 export * from './lib/core/get-domain';
 export * from './lib/core/id-generator';
 export * from './lib/core/log-in-request';
-export * from './lib/core/message';
-export * from './lib/core/message-store';
-export * from './lib/core/plugin';
-export * from './lib/core/presence';
-export * from './lib/core/recipient';
-export * from './lib/core/stanza';
-export * from './lib/core/subscription';
+export * from './lib/services/adapters/xmpp/core/message';
+export * from './lib/services/adapters/xmpp/core/message-store';
+export * from './lib/services/adapters/xmpp/core/plugin';
+export * from './lib/services/adapters/xmpp/core/presence';
+export * from './lib/services/adapters/xmpp/core/recipient';
+export * from './lib/services/adapters/xmpp/core/stanza';
+export * from './lib/services/adapters/xmpp/core/subscription';
 export * from './lib/core/translations';
 export * from './lib/hooks/chat-contact-click-handler';
 export * from './lib/hooks/file-upload-handler';
@@ -75,7 +74,17 @@ export * from './lib/services/components/chat-message-list-registry.service';
 export * from './lib/hooks/report-user-service';
 export * from './lib/components/chat-message-text-area/chat-message-link/chat-message-link.component';
 export * from './lib/core/utils-file';
-export * from './lib/core/room';
+export * from './lib/services/adapters/xmpp/core/room';
+export * from './lib/services/adapters/xmpp/core/jid';
+export * from './lib/services/adapters/xmpp/core/contact';
+export * from './lib/services/adapters/xmpp/core/form';
+export * from './lib/services/adapters/xmpp/core/message';
+export * from './lib/services/adapters/xmpp/core/message-store';
+export * from './lib/services/adapters/xmpp/core/presence';
+export * from './lib/services/adapters/xmpp/core/plugin';
+export * from './lib/services/adapters/xmpp/core/recipient';
+export * from './lib/services/adapters/xmpp/core/stanza';
+export * from './lib/services/adapters/xmpp/core/subscription';
 export * from './lib/services/adapters/xmpp/interface/builder';
 export * from './lib/services/adapters/xmpp/plugins/multi-user-chat/room-occupant';
 export * from './lib/services/adapters/xmpp/plugins/multi-user-chat/occupant-change';

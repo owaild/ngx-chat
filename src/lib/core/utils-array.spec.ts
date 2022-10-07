@@ -21,7 +21,7 @@ describe('array utils', () => {
     describe('#insertSortedLast', () => {
 
         it('should insert elements and sort the list correctly', () => {
-            const list = [];
+            const list: number[] = [];
             const numbers = [5, 1, 7, 9, 123, -23, -24, 0, 0, 0];
             for (const num of numbers) {
                 insertSortedLast(num, list);

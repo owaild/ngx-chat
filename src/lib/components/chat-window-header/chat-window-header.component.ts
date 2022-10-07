@@ -1,7 +1,7 @@
 import {Component, EventEmitter, Inject, Input, OnInit, Optional, Output} from '@angular/core';
 import {ChatWindowState} from '../../services/components/chat-list-state.service';
 import {ChatContactClickHandler, CONTACT_CLICK_HANDLER_TOKEN} from '../../hooks/chat-contact-click-handler';
-import {Contact, isContact} from '../../core/contact';
+import {Contact, isContact} from '../../services/adapters/xmpp/core/contact';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 
 @Component({

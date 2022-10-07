@@ -1,4 +1,4 @@
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 
 export const nsCaps = 'http://jabber.org/protocol/caps';
 

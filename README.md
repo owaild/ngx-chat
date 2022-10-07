@@ -12,7 +12,7 @@ application.
 [Have a look at our demo (valid XMPP credentials required)](https://pazznetwork.github.io/ngx-chat-ghpages/)
 
 * 🌋 build in XMPP server support
-    * send and receive messages, load messages from message history (XEP-0313), supports multi user chat
+    * send and receive messages, load messages from message history (XEP-0313), supports multi-user chat
 * 🔥 fully featured angular chat components
 * 💉 open for injection
     * use the server side buddy list or use your own data source for that, API methods for adding / removing buddies available
@@ -36,6 +36,8 @@ application.
 
 ### Compatibility
 
+* Angular 14 (ngx-chat 0.14.x)
+* Angular 13 (ngx-chat 0.13.x)
 * Angular 12 (ngx-chat 0.12.x)
 * Angular 11 (ngx-chat 0.11.x)
 * Angular 10 (ngx-chat 0.10.x)
@@ -51,7 +53,7 @@ These instructions require Angular 12.
 First install ngx-chat and its dependencies via npm:
 
 ```bash
-npm install --save @pazznetwork/ngx-chat @xmpp/client@~0.13.0 @angular/cdk@~12.2.0
+npm install --save @pazznetwork/ngx-chat strophe.js@1.4.4 rxjs@7.5.7
 ```
 
 After that, import ngx-chat in your root module:
@@ -205,7 +207,7 @@ For clean and standardised commit messages we use commit lint, for the format se
 
 ```bash
 # increment version number in projects/pazznetwork/ngx-chat/package.json
-VERSION=0.12.0 # change accordingly
+VERSION=0.14.0 # change accordingly
 npm run changelog
 git add .
 git commit -m "docs: release $VERSION"

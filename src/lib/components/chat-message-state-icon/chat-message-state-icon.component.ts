@@ -1,5 +1,5 @@
 import {Component, Input} from '@angular/core';
-import { MessageState } from '../../core/message';
+import { MessageState } from '../../services/adapters/xmpp/core/message';
 
 @Component({
     selector: 'ngx-chat-message-state-icon',

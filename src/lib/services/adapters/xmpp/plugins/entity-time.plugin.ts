@@ -3,7 +3,7 @@ import {catchError, first, map, mergeMap, timeout} from 'rxjs/operators';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 import {Finder} from '../shared/finder';
 

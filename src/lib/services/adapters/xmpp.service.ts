@@ -1,14 +1,13 @@
 import {Inject, Injectable, NgZone} from '@angular/core';
-import {jid as parseJid} from '@xmpp/client';
 import {BehaviorSubject, combineLatest, firstValueFrom, merge, Observable, ReplaySubject, Subject} from 'rxjs';
 import {filter, first, map} from 'rxjs/operators';
-import {Contact} from '../../core/contact';
+import {Contact} from './xmpp/core/contact';
 import {dummyAvatarContact} from '../../core/contact-avatar';
 import {LogInRequest} from '../../core/log-in-request';
-import {Recipient} from '../../core/recipient';
-import {Room} from '../../core/room';
-import {Message, MessageState} from '../../core/message';
-import {Form} from '../../core/form';
+import {Recipient} from './xmpp/core/recipient';
+import {Room} from './xmpp/core/room';
+import {Message, MessageState} from './xmpp/core/message';
+import {Form} from './xmpp/core/form';
 import {Translations} from '../../core/translations';
 import {defaultTranslations} from '../../core/translations-default';
 import {ChatService, ConnectionStates, JidToNumber,} from './xmpp/interface/chat.service';
@@ -20,7 +19,6 @@ import {MultiUserChatPlugin} from './xmpp/plugins/multi-user-chat/multi-user-cha
 import {RosterPlugin} from './xmpp/plugins/roster.plugin';
 import {CHAT_CONNECTION_FACTORY_TOKEN, ChatConnection, ChatConnectionFactory} from './xmpp/interface/chat-connection';
 import {XmppHttpFileUploadHandler} from './xmpp/plugins/xmpp-http-file-upload.handler';
-import {JID} from '@xmpp/jid';
 import {MucSubPlugin} from './xmpp/plugins/muc-sub.plugin';
 import {RegistrationPlugin} from './xmpp/plugins/registration.plugin';
 import {MessageStatePlugin} from './xmpp/plugins/message-state.plugin';
@@ -42,6 +40,7 @@ import {Invitation} from './xmpp/plugins/multi-user-chat/invitation';
 import {StropheConnectionService} from './xmpp/service/strophe-connection.service';
 import {RoomOccupant} from './xmpp/plugins/multi-user-chat/room-occupant';
 import {RoomCreationOptions} from './xmpp/plugins/multi-user-chat/room-creation-options';
+import { JID, parseJid } from './xmpp/core/jid';
 
 @Injectable()
 export class XmppService implements ChatService {
@@ -296,10 +295,10 @@ export class XmppService implements ChatService {
     }
 
     async addContact(jid: string) {
-        console.log('ADD CONTACT')
+        console.log('ADD CONTACT');
         const contact = await this.getContactById(jid);
 
-        console.log('AddContact. contact ', contact?.name)
+        console.log('AddContact. contact ', contact?.name);
         if (!contact || !contact.isSubscribed()) {
             await this.plugins.roster.addRosterContact(jid);
         }
@@ -386,7 +385,7 @@ export class XmppService implements ChatService {
 
     async leaveRoom(roomJid: JID, status?: string): Promise<void> {
         await this.plugins.muc.leaveRoom(roomJid, status);
-        await this.plugins.muc.leftRoom$.pipe(filter(roomJid => roomJid.equals(roomJid)), first()).toPromise();
+        await firstValueFrom(this.plugins.muc.leftRoom$.pipe(filter(roomJid => roomJid.equals(roomJid)), first()));
     }
 
     async retrieveSubscriptions(): Promise<Map<string, string[]>> {

@@ -1,4 +1,4 @@
-import { JID } from '@xmpp/jid';
+import { JID } from "../../core/jid";
 
 export enum Affiliation {
     none = 'none',

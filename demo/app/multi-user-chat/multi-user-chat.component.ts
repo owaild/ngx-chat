@@ -8,9 +8,8 @@ import {
     Room,
     RoomCreationOptions,
 } from '@pazznetwork/ngx-chat';
-import {jid} from '@xmpp/jid';
 import {NgModel} from '@angular/forms';
-import {MUC_SUB_EVENT_TYPE, Recipient, RoomOccupant} from 'src/public-api';
+import {MUC_SUB_EVENT_TYPE, parseJid, Recipient, RoomOccupant} from 'src/public-api';
 
 @Component({
     selector: 'app-multi-user-chat',
@@ -34,7 +33,7 @@ export class MultiUserChatComponent {
 
     updateOccupantJid(enteredJid: string) {
         try {
-            this.occupantJid = jid(enteredJid);
+            this.occupantJid = parseJid(enteredJid);
             this.occupantJidInput.control.setErrors(null);
         } catch (e) {
             this.occupantJidInput.control.setErrors({notAJid: true});

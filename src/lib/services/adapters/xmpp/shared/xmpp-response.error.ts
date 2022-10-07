@@ -1,4 +1,4 @@
-import {Stanza} from '../../../../core/stanza';
+import {Stanza} from '../core/stanza';
 import {Finder} from './finder';
 
 export class XmppResponseError extends Error {

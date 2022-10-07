@@ -1,4 +1,4 @@
-import { JID } from '@xmpp/jid';
+import { JID } from "../../core/jid";
 
 export interface Invitation {
     type: 'invite' | 'decline';

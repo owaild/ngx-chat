@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import { Recipient } from '../core/recipient';
+import { Recipient } from '../services/adapters/xmpp/core/recipient';
 
 /**
  * Optional injectable token to handle contact clicks in the chat

@@ -1,8 +1,8 @@
-import {Direction} from '../../../../core/message';
-import {IqResponseStanza, Stanza} from '../../../../core/stanza';
+import {Direction} from '../core/message';
+import {IqResponseStanza, Stanza} from '../core/stanza';
 import {XmppService} from '../../xmpp.service';
 import {MessageReceivedEvent} from './message.plugin';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {Finder} from '../shared/finder';
 import {first} from 'rxjs/operators';
 import {firstValueFrom} from 'rxjs';

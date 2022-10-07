@@ -1,6 +1,6 @@
 import {Component, Inject, Input, Optional} from '@angular/core';
 import {ChatContactClickHandler, CONTACT_CLICK_HANDLER_TOKEN} from '../../hooks/chat-contact-click-handler';
-import {Recipient} from '../../core/recipient';
+import {Recipient} from '../../services/adapters/xmpp/core/recipient';
 
 @Component({
     selector: 'ngx-chat-bubble-avatar',

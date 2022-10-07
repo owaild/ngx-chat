@@ -1,13 +1,13 @@
-import {jid as parseJid} from '@xmpp/client';
-import {Contact, Invitation} from '../../../../core/contact';
-import {Direction, Message, MessageState} from '../../../../core/message';
-import {MessageWithBodyStanza, Stanza} from '../../../../core/stanza';
+import {Contact, Invitation} from '../core/contact';
+import {Direction, Message, MessageState} from '../core/message';
+import {MessageWithBodyStanza, Stanza} from '../core/stanza';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
 import {nsMucUser} from './multi-user-chat/multi-user-chat-constants';
-import {ChatPlugin, StanzaHandlerChatPlugin} from '../../../../core/plugin';
+import {StanzaHandlerChatPlugin} from '../core/plugin';
 import {firstValueFrom, Subject} from 'rxjs';
 import {ChatConnection} from '../interface/chat-connection';
+import { parseJid } from '../core/jid';
 
 export class MessageReceivedEvent {
     discard = false;

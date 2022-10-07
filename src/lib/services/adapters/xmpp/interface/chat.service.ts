@@ -1,18 +1,18 @@
 import {InjectionToken} from '@angular/core';
 import {BehaviorSubject, Observable} from 'rxjs';
-import {Room} from '../../../../core/room';
-import {Contact} from '../../../../core/contact';
+import {Room} from '../core/room';
+import {Contact} from '../core/contact';
 import {LogInRequest} from '../../../../core/log-in-request';
-import {Recipient} from '../../../../core/recipient';
+import {Recipient} from '../core/recipient';
 import {Translations} from '../../../../core/translations';
 import {FileUploadHandler} from '../../../../hooks/file-upload-handler';
-import {JID} from '@xmpp/jid';
-import {Form} from '../../../../core/form';
-import {Message, MessageState} from '../../../../core/message';
+import {Form} from '../core/form';
+import {Message, MessageState} from '../core/message';
 import {ChatConnection} from './chat-connection';
 import {Invitation} from '../plugins/multi-user-chat/invitation';
 import {RoomCreationOptions} from '../plugins/multi-user-chat/room-creation-options';
 import {RoomOccupant} from '../plugins/multi-user-chat/room-occupant';
+import { JID } from '../core/jid';
 
 export type JidToNumber = Map<string, number>;
 

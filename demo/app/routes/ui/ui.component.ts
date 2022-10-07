@@ -1,7 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Contact, Direction, dummyAvatarContact, MessageState, Room } from '@pazznetwork/ngx-chat';
-import { jid as parseJid } from '@xmpp/client';
-import { JID } from '@xmpp/jid';
+import { Contact, Direction, dummyAvatarContact, MessageState, Room, parseJid, JID } from '@pazznetwork/ngx-chat';
 
 @Component({
     selector: 'app-ui',

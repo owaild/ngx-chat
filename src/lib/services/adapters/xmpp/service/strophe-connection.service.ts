@@ -1,14 +1,14 @@
-import {JID} from '@xmpp/jid';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {LogInRequest} from '../../../../core/log-in-request';
 import {LogService} from './log.service';
-import {Strophe} from 'strophe.js';
 import {ChatConnection, ChatConnectionFactory} from '../interface/chat-connection';
 import {StropheStanzaBuilder} from '../strophe-stanza-builder';
 import {StropheConnection} from '../strophe-connection';
 import {filter, shareReplay} from 'rxjs/operators';
 import {XmppResponseError} from '../shared/xmpp-response.error';
 import {ConnectionStates} from '../interface/chat.service';
+import {JID} from '../core/jid';
+import {Status, Connection, Handler, $build} from '@pazznetwork/strophets'
 
 export class StropheChatConnectionFactory implements ChatConnectionFactory {
     create(logService: LogService,
@@ -44,10 +44,10 @@ export function getConnectionsUrls({service, domain}: Pick<LogInRequest, 'servic
 }
 
 const errorMessages = {
-    [Strophe.Status.ERROR]: 'An error occurred connecting',
-    [Strophe.Status.CONNFAIL]: 'The connection failed',
-    [Strophe.Status.AUTHFAIL]: 'The authentication failed',
-    [Strophe.Status.CONNTIMEOUT]: 'The connection timed out',
+    [Status.ERROR]: 'An error occurred connecting',
+    [Status.CONNFAIL]: 'The connection failed',
+    [Status.AUTHFAIL]: 'The authentication failed',
+    [Status.CONNTIMEOUT]: 'The connection timed out',
 };
 
 export enum StropheStatusRegister {
@@ -80,7 +80,7 @@ export class StropheConnectionService implements ChatConnection {
      * User JID with resource, not bare.
      */
     userJid?: JID;
-    connection?: Strophe.Connection;
+    connection?: Connection;
 
     constructor(
         protected readonly logService: LogService,
@@ -103,7 +103,7 @@ export class StropheConnectionService implements ChatConnection {
     }
 
     deleteHandler(handlerRef: object) {
-        this.connection.deleteHandler(handlerRef as Strophe.Handler);
+        this.connection.deleteHandler(handlerRef as Handler);
     }
 
     onOnline(jid: JID): void {
@@ -144,39 +144,44 @@ export class StropheConnectionService implements ChatConnection {
     }
 
     createConnectionStatusHandler(username: string, domain: string, resolve: () => void, reject: (reason?: string) => void) {
-        return (status: Strophe.Status, value: string) => {
+        return (status: Status, value: string) => {
             this.logService.info('status update =', status, value ? JSON.stringify(value) : '');
 
             switch (status) {
-                case Strophe.Status.REDIRECT:
-                case Strophe.Status.ATTACHED:
-                case Strophe.Status.CONNECTING:
+                case Status.REDIRECT:
+                case Status.ATTACHED:
+                case Status.CONNECTING:
+                // @ts-ignore
                 case StropheStatusRegister.REGISTER:
+                // @ts-ignore
                 case StropheStatusRegister.REGISTERED:
                     break;
-                case Strophe.Status.AUTHENTICATING:
+                case Status.AUTHENTICATING:
                     break;
-                case Strophe.Status.CONNECTED:
+                case Status.CONNECTED:
                     this.onBeforeOnlineSubject.next(`${username}@${domain}`);
-                    this.onOnline(new JID(username, domain));
+                    this.onOnline(new JID(username, domain, null));
                     resolve();
                     break;
-                case Strophe.Status.ERROR:
-                case Strophe.Status.CONNFAIL:
-                case Strophe.Status.AUTHFAIL:
-                case Strophe.Status.CONNTIMEOUT:
+                case Status.ERROR:
+                case Status.CONNFAIL:
+                case Status.AUTHFAIL:
+                case Status.CONNTIMEOUT:
+                // @ts-ignore
                 case StropheStatusRegister.CONFLICT:
+                // @ts-ignore
                 case StropheStatusRegister.REGIFAIL:
+                // @ts-ignore
                 case StropheStatusRegister.NOTACCEPTABLE:
                     this.stateSubject.next('disconnected');
                     this.onOffline();
                     reject(`${errorMessages[status]}, failed with status code: ${status}`);
                     break;
-                case Strophe.Status.BINDREQUIRED:
+                case Status.BINDREQUIRED:
                     this.connection.bind();
                     break;
-                case Strophe.Status.DISCONNECTING:
-                case Strophe.Status.DISCONNECTED:
+                case Status.DISCONNECTING:
+                case Status.DISCONNECTED:
                     this.onOffline();
                     break;
                 default:

@@ -1,4 +1,4 @@
-import { Presence } from './presence';
+import { Presence } from '../services/adapters/xmpp/core/presence';
 
 export interface Translations {
     acceptSubscriptionRequest: string;

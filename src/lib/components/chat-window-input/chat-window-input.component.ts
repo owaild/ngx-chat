@@ -1,5 +1,5 @@
 import {Component, ElementRef, EventEmitter, Inject, Input, Output, ViewChild} from '@angular/core';
-import {Recipient} from '../../core/recipient';
+import {Recipient} from '../../services/adapters/xmpp/core/recipient';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 
 @Component({

@@ -1,7 +1,7 @@
 import {Component, Input} from '@angular/core';
 import {XmppService} from '../../services/adapters/xmpp.service';
-import {Direction} from '../../core/message';
-import {Contact, Invitation} from '../../core/contact';
+import {Direction} from '../../services/adapters/xmpp/core/message';
+import {Contact, Invitation} from '../../services/adapters/xmpp/core/contact';
 
 
 @Component({

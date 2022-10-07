@@ -1,4 +1,4 @@
-import { Presence } from './presence';
+import { Presence } from '../services/adapters/xmpp/core/presence';
 import { Translations } from './translations';
 
 export function defaultTranslations(): Translations {

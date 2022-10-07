@@ -1,7 +1,7 @@
 import {id} from '../../../../core/id-generator';
-import {Message} from '../../../../core/message';
-import {MessageWithBodyStanza} from '../../../../core/stanza';
-import {ChatPlugin} from '../../../../core/plugin';
+import {Message} from '../core/message';
+import {MessageWithBodyStanza} from '../core/stanza';
+import {ChatPlugin} from '../core/plugin';
 
 const nsSID = 'urn:xmpp:sid:0';
 

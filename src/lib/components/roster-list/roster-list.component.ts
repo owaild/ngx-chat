@@ -2,8 +2,8 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import {ChangeDetectionStrategy, Component, EventEmitter, Inject, Input, OnInit, Output} from '@angular/core';
 import { combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Contact } from '../../core/contact';
-import { Recipient } from '../../core/recipient';
+import { Contact } from '../../services/adapters/xmpp/core/contact';
+import { Recipient } from '../../services/adapters/xmpp/core/recipient';
 import { ChatListStateService } from '../../services/components/chat-list-state.service';
 import { CHAT_SERVICE_TOKEN, ChatService } from '../../services/adapters/xmpp/interface/chat.service';
 

@@ -1,10 +1,10 @@
-import {Contact} from '../../../../core/contact';
-import {Presence} from '../../../../core/presence';
-import {PresenceStanza, Stanza} from '../../../../core/stanza';
-import {ContactSubscription} from '../../../../core/subscription';
+import {Contact} from '../core/contact';
+import {Presence} from '../core/presence';
+import {PresenceStanza, Stanza} from '../core/stanza';
+import {ContactSubscription} from '../core/subscription';
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
-import {StanzaHandlerChatPlugin} from '../../../../core/plugin';
+import {StanzaHandlerChatPlugin} from '../core/plugin';
 import {ChatConnection} from '../interface/chat-connection';
 import {Finder} from '../shared/finder';
 import {nsMuc} from './multi-user-chat/multi-user-chat-constants';
@@ -37,9 +37,9 @@ export class RosterPlugin implements StanzaHandlerChatPlugin {
 
     private readonly addContactFromRosterXPushSubject = new Subject<string>();
 
-    private rosterPushHandler;
-    private contactSuggestionHandler;
-    private presenceHandler;
+    private rosterPushHandler: object;
+    private contactSuggestionHandler: object;
+    private presenceHandler: object;
 
     constructor(
         private readonly chatService: XmppService,

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Recipient } from '../../core/recipient';
+import { Recipient } from '../adapters/xmpp/core/recipient';
 
 /**
  * Used to determine if a message component for a given recipient is open.

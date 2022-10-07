@@ -1,7 +1,7 @@
 import {BehaviorSubject, combineLatest, Observable, ReplaySubject} from 'rxjs';
 import {filter, first, map} from 'rxjs/operators';
 import {XmppService} from '../../xmpp.service';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 
 export interface Service {
     jid: string;

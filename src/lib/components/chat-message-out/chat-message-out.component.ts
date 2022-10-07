@@ -1,6 +1,6 @@
 import {Component, Inject, Input} from '@angular/core';
-import {Message, MessageState} from '../../core/message';
-import {Recipient} from '../../core/recipient';
+import {Message, MessageState} from '../../services/adapters/xmpp/core/message';
+import {Recipient} from '../../services/adapters/xmpp/core/recipient';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 
 

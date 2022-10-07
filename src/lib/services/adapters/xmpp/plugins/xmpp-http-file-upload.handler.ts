@@ -2,7 +2,7 @@ import {HttpClient} from '@angular/common/http';
 import {XmppService} from '../../xmpp.service';
 import {Service, ServiceDiscoveryPlugin} from './service-discovery.plugin';
 import {FileUploadHandler} from '../../../../hooks/file-upload-handler';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {Finder} from '../shared/finder';
 
 export const upload = 'urn:xmpp:http:upload:0';

@@ -4,9 +4,9 @@ import {takeUntil} from 'rxjs/operators';
 import {ChatListStateService} from '../../services/components/chat-list-state.service';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 import {REPORT_USER_INJECTION_TOKEN, ReportUserService} from '../../hooks/report-user-service';
-import {Contact} from '../../core/contact';
-import {ContactSubscription} from '../../core/subscription';
-import {Recipient} from '../../core/recipient';
+import {Contact} from '../../services/adapters/xmpp/core/contact';
+import {ContactSubscription} from '../../services/adapters/xmpp/core/subscription';
+import {Recipient} from '../../services/adapters/xmpp/core/recipient';
 
 enum SubscriptionAction {
     PENDING_REQUEST,

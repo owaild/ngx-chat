@@ -1,6 +1,6 @@
 import {Component, Inject, Input} from '@angular/core';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
-import {Contact} from '../../core/contact';
+import {Contact} from '../../services/adapters/xmpp/core/contact';
 
 @Component({
     selector: 'ngx-chat-roster-recipient-presence',

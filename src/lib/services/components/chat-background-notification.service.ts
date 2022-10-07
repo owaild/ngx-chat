@@ -1,8 +1,8 @@
 import {Inject, Injectable} from '@angular/core';
-import {JID} from '@xmpp/jid';
-import {Contact} from '../../core/contact';
+import {Contact} from '../adapters/xmpp/core/contact';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../adapters/xmpp/interface/chat.service';
-import {Room} from '../../core/room';
+import {Room} from '../adapters/xmpp/core/room';
+import {JID} from '../adapters/xmpp/core/jid';
 
 @Injectable()
 export class ChatBackgroundNotificationService {

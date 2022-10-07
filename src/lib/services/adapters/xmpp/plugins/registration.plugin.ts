@@ -1,7 +1,7 @@
 import {LogService} from '../service/log.service';
 import {getConnectionsUrls, StropheConnectionService, StropheStatusRegister} from '../service/strophe-connection.service';
 import {StropheConnection} from '../strophe-connection';
-import {Strophe} from 'strophe.js';
+import { $iq, Connection, getNodeFromJid, getBareJidFromJid } from '@pazznetwork/strophets';
 
 const nsXForm = 'jabber:x:data'; // currently generic registration forms are not implemented
 const nsRegister = 'jabber:iq:register';
@@ -32,7 +32,7 @@ export class RegistrationPlugin {
     ): Promise<void> {
         let registering = false;
         let processed_features = false;
-        let connect_cb_data = {req: null, raw: null};
+        let connect_cb_data: {req: unknown, raw: unknown} = {req: null, raw: null};
 
         if (username.indexOf('@') > -1) {
             this.logService.warn('username should not contain domain, only local part, this can lead to errors!');
@@ -41,8 +41,8 @@ export class RegistrationPlugin {
         const connectionURLs = getConnectionsUrls({domain, service});
 
         this.connectionService.connection = await StropheConnection.createConnection(this.logService, connectionURLs);
-        const conn = this.connectionService.connection as Strophe.Connection & {
-            _connect_cb: (req: Strophe.Request, _callback: (arg) => void, raw: unknown) => void
+        const conn = this.connectionService.connection as Connection & {
+            _connect_cb: (req: Request, _callback: (arg: unknown) => void, raw: unknown) => void
         };
 
         const readyToStartRegistration = new Promise<void>(resolve => {
@@ -62,9 +62,9 @@ export class RegistrationPlugin {
                 if (processed_features) {
                     // exchange Input hooks to not print the stream:features twice
                     const xmlInput = conn.xmlInput;
-                    conn.xmlInput = Strophe.Connection.prototype.xmlInput;
+                    conn.xmlInput = Connection.prototype.xmlInput;
                     const rawInput = conn.rawInput;
-                    conn.rawInput = Strophe.Connection.prototype.rawInput;
+                    conn.rawInput = Connection.prototype.rawInput;
                     connect_callback(req, callback, raw);
                     conn.xmlInput = xmlInput;
                     conn.rawInput = rawInput;
@@ -75,20 +75,28 @@ export class RegistrationPlugin {
 
             // hooking strophe`s authenticate
             const auth_old = conn.authenticate.bind(conn);
-            conn.authenticate = function(matched) {
+            conn.authenticate = function(this: {
+                fields: {
+                    username: string,
+                    password: string,
+                },
+                domain: string,
+                _connect_cb_data: {req: Request, raw: unknown}
+            }, matched: unknown) {
                 const isMatched = typeof matched !== 'undefined';
                 if (isMatched) {
                     auth_old(matched);
                     return;
                 }
+
                 if (!this.fields.username || !this.domain || !this.fields.password) {
                     console.info('Register a JID first!');
                     return;
                 }
 
                 conn.jid = this.fields.username + '@' + this.domain;
-                conn.authzid = Strophe.getBareJidFromJid(conn.jid);
-                conn.authcid = Strophe.getNodeFromJid(conn.jid);
+                conn.authzid = getBareJidFromJid(conn.jid);
+                conn.authcid = getNodeFromJid(conn.jid);
                 conn.pass = this.fields.password;
 
                 const req = this._connect_cb_data.req;
@@ -112,7 +120,7 @@ export class RegistrationPlugin {
         conn.reset();
     }
 
-    private async queryForRegistrationForm(conn: Strophe.Connection, domain, username) {
+    private async queryForRegistrationForm(conn: Connection, domain: string, username: string) {
         return new Promise<void>((resolve, reject) => {
             // send a get request for registration, to get all required data fields
             conn._addSysHandler((stanza) => {
@@ -133,7 +141,7 @@ export class RegistrationPlugin {
         });
     }
 
-    private async submitRegisterInformationQuery(conn: Strophe.Connection, username: string, password: string) {
+    private async submitRegisterInformationQuery(conn: Connection, username: string, password: string) {
         return new Promise<void>((resolve, reject) => {
             conn._addSysHandler((stanza) => {
                 let error = null;
@@ -147,7 +155,7 @@ export class RegistrationPlugin {
                     }
 
                     // this is either 'conflict' or 'not-acceptable'
-                    error = error[0].firstChild.tagName.toLowerCase();
+                    error = error[0].firstChild.nodeName.toLowerCase();
                     if (error === 'conflict') {
                         conn._changeConnectStatus(StropheStatusRegister.CONFLICT, error);
                         reject();

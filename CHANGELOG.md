@@ -702,5 +702,5 @@ convention.
 * make chatConnectionService.client private
 * removed XmppClientToken
 
-
+npx ng --stats-json build @pazznetwork/ngx-chat
 

@@ -1,8 +1,9 @@
 import {Builder} from './interface/builder';
+import {$build, Builder as StropheBuilder} from '@pazznetwork/strophets';
 
 export class StropheStanzaBuilder implements Builder {
     constructor(
-        private stropheBuilder: Strophe.Builder,
+        private stropheBuilder: StropheBuilder,
         private readonly sendInner: (content: Element) => Promise<void>,
         private readonly sendInnerAwaitingResponse: (content: Element) => Promise<Element>,
     ) {

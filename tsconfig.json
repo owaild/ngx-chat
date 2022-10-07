@@ -3,24 +3,34 @@
   "compileOnSave": false,
   "compilerOptions": {
     "baseUrl": "./",
-    "outDir": "./dist/out-tsc",
-    "forceConsistentCasingInFileNames": true,
-    "strictNullChecks": false,
-    "noImplicitReturns": true,
-    "skipLibCheck": true,
-    "noFallthroughCasesInSwitch": true,
+    "outDir": "./dist",
     "sourceMap": true,
     "declaration": false,
     "downlevelIteration": true,
     "experimentalDecorators": true,
     "moduleResolution": "node",
     "importHelpers": true,
-    "target": "es2015",
+    "target": "es2020",
     "module": "es2020",
     "lib": [
-      "es2018",
+      "es2020",
       "dom"
     ],
+    "noEmitHelpers": true,
+    "allowUnreachableCode": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "removeComments": false,
+    "skipLibCheck": false,
+    "strictNullChecks": false,
+    "suppressImplicitAnyIndexErrors": true,
+    "esModuleInterop": true,
+    "preserveSymlinks": true,
+    "resolveJsonModule": true,
     // the paths config is only necessary for the demo app, it could be moved to demo/tsconfig.app.json
     // and it would compile but the editors are not aware that demo/tsconfig.app.json is handled by ng-cli as if it
     // was located in the project root and so a lot of false positive issues are displayed
@@ -39,6 +49,33 @@
       ],
       "rxjs/*": [
         "./node_modules/rxjs/*"
+      ],
+      "zlib": [
+        "./node_modules/browserify-zlib"
+      ],
+      "stream": [
+        "./node_modules/stream-browserify"
+      ],
+      "crypto": [
+        "./node_modules/crypto-browserify"
+      ],
+      "http": [
+        "./node_modules/stream-http"
+      ],
+      "https": [
+        "./node_modules/https-browserify"
+      ],
+      "assert": [
+        "./node_modules/assert-browserify"
+      ],
+      "util": [
+        "./node_modules/util"
+      ],
+      "tls": [
+        "./node_modules/tls-browserify"
+      ],
+      "net": [
+        "./node_modules/net-browserify"
       ]
     }
   },

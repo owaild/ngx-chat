@@ -1,4 +1,4 @@
-import { JID } from '@xmpp/jid';
+import { JID } from '../../core/jid';
 import { Affiliation } from './affiliation';
 import { Role } from './role';
 

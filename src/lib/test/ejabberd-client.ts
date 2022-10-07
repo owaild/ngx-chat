@@ -56,7 +56,7 @@ export class EjabberdClient {
     }
 
     async getLastSeen(user: string, host: string) {
-        const {timestamp} = await this.executeRequest('get_last', {
+        const {timestamp} = await this.executeRequest<{timestamp: number}>('get_last', {
             user,
             host,
         });
@@ -67,7 +67,7 @@ export class EjabberdClient {
      * @deprecated can be misleading as there are silent read notifications
      */
     async getUnreadMessageCount(user: string, server: string): Promise<number> {
-        const {value} = await this.executeRequest('get_offline_count', {
+        const {value} = await this.executeRequest<{value: number}>('get_offline_count', {
             user,
             server,
         });
@@ -139,7 +139,7 @@ export class EjabberdClient {
         });
     }
 
-    async changePassword(user: string, password: string, domain) {
+    async changePassword(user: string, password: string, domain: string) {
         return await this.executeRequest('change_password', {
             user,
             host: domain,

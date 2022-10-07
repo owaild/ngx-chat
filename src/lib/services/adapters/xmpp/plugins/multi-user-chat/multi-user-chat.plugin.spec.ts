@@ -1,7 +1,5 @@
-import {jid as parseJid} from '@xmpp/client';
 import {filter, first, map} from 'rxjs/operators';
-import {Direction} from '../../../../../core/message';
-import {JID, jid} from '@xmpp/jid';
+import {Direction} from '../../core/message';
 import {Affiliation} from './affiliation';
 import {Role} from './role';
 import {OccupantNickChange} from './occupant-change';
@@ -11,6 +9,7 @@ import {firstValueFrom} from 'rxjs';
 import {XmppServiceModule} from '../../../xmpp.service.module';
 import {XmppService} from '../../../xmpp.service';
 import {EjabberdClient} from '../../../../../test/ejabberd-client';
+import {JID, parseJid} from '../../core/jid';
 
 const domain = 'local-jabber.entenhausen.pazz.de';
 const service = 'wss://' + domain + ':5280/websocket';
@@ -36,12 +35,12 @@ const ghostLogin: LogInRequest = {
     password: 'ghost'
 };
 
-const romeoJID = jid(romeoLogin.username + '@' + romeoLogin.domain);
-const juliaJID = jid(romeoLogin.username + '@' + romeoLogin.domain);
-const ghostJID = jid(romeoLogin.username + '@' + romeoLogin.domain);
+const romeoJID = parseJid(romeoLogin.username + '@' + romeoLogin.domain);
+const juliaJID = parseJid(romeoLogin.username + '@' + romeoLogin.domain);
+const ghostJID = parseJid(romeoLogin.username + '@' + romeoLogin.domain);
 
 function roomIdToJid(id: string): JID {
-    return jid(id + '@' + 'conference.' + romeoLogin.domain);
+    return parseJid(id + '@' + 'conference.' + romeoLogin.domain);
 }
 
 describe('multi user chat plugin', () => {
@@ -390,18 +389,18 @@ describe('multi user chat plugin', () => {
                 expect(occupant.affiliation).toEqual(Affiliation.outcast);
                 resolve();
             });
-            await chatService.banUserForRoom(otherOccupantJid, jid('chatroom@conference.example.com'));
+            await chatService.banUserForRoom(otherOccupantJid, parseJid('chatroom@conference.example.com'));
         });
 
         it('should handle unban occupant', async () => {
             const otherOccupantJid = 'chatroom@conference.example.com/other';
             const roomJid = 'chatroom@conference.example.com';
 
-            await chatService.banUserForRoom(jid(otherOccupantJid), jid(roomJid));
-            let banList = await chatService.queryRoomUserList(jid(roomJid));
+            await chatService.banUserForRoom(parseJid(otherOccupantJid), parseJid(roomJid));
+            let banList = await chatService.queryRoomUserList(parseJid(roomJid));
             expect(banList.length).toEqual(1);
-            await chatService.unbanUserForRoom(jid(otherOccupantJid), jid(roomJid));
-            banList = await chatService.queryRoomUserList(jid(roomJid));
+            await chatService.unbanUserForRoom(parseJid(otherOccupantJid), parseJid(roomJid));
+            banList = await chatService.queryRoomUserList(parseJid(roomJid));
             expect(banList.length).toEqual(0);
         });
 
@@ -436,7 +435,7 @@ describe('multi user chat plugin', () => {
         });
 
         it('should be able to change room topic', async () => {
-            const roomJid = parseJid('chatroom', 'conference.example.com');
+            const roomJid = parseJid('chatroom@conference.example.com');
             const room = await chatService.joinRoom(roomJid);
 
             const newSubject = 'new subject';

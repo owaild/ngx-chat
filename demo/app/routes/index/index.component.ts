@@ -3,7 +3,7 @@ import {
     CHAT_SERVICE_TOKEN,
     ChatBackgroundNotificationService,
     ChatListStateService,
-    ChatService,
+    ChatService, ConnectionStates,
     ContactFactoryService,
     LogInRequest,
     LogLevel,
@@ -25,6 +25,7 @@ export class IndexComponent {
     otherJid?: string;
     private readonly registrationMessageSubject = new Subject<string>();
     registrationMessage$: Observable<string> = this.registrationMessageSubject.asObservable();
+
     constructor(
         @Inject(CHAT_SERVICE_TOKEN) public chatService: ChatService,
         private contactFactory: ContactFactoryService,
@@ -44,7 +45,7 @@ export class IndexComponent {
         this.password = contactData.password;
         this.username = contactData.username;
 
-        chatService.state$.subscribe((state) => IndexComponent.stateChanged(state));
+        chatService.state$.subscribe((state: ConnectionStates) => IndexComponent.stateChanged(state));
         chatBackgroundNotificationService.enable();
     }
 

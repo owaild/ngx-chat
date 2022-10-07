@@ -1,6 +1,6 @@
 import {LogService} from '../service/log.service';
 import {XmppService} from '../../xmpp.service';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {combineLatest, map, of, tap, timeout, timer} from 'rxjs';
 import {catchError} from 'rxjs/operators';
 

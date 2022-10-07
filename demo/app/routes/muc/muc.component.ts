@@ -6,9 +6,9 @@ import {
     JID,
     Room,
     RoomOccupant,
+    parseJid
 } from '@pazznetwork/ngx-chat';
 import { from, Observable, Subject } from 'rxjs';
-import { jid } from '@xmpp/client';
 import { distinctUntilChanged, filter, switchMap, takeUntil } from 'rxjs/operators';
 
 @Component({
@@ -123,7 +123,7 @@ export class MucComponent implements OnInit, OnDestroy {
     }
 
     async inviteUser() {
-        await this.chatService.inviteUserToRoom(jid(this.inviteJid), this.currentRoom.jid);
+        await this.chatService.inviteUserToRoom(parseJid(this.inviteJid), this.currentRoom.jid);
     }
 
     async changeNick() {
@@ -139,11 +139,11 @@ export class MucComponent implements OnInit, OnDestroy {
     }
 
     async grantMembership() {
-        await this.chatService.grantMembershipForRoom(jid(this.memberJid), this.currentRoom.jid);
+        await this.chatService.grantMembershipForRoom(parseJid(this.memberJid), this.currentRoom.jid);
     }
 
     async revokeMembership() {
-        await this.chatService.revokeMembershipForRoom(jid(this.memberJid), this.currentRoom.jid);
+        await this.chatService.revokeMembershipForRoom(parseJid(this.memberJid), this.currentRoom.jid);
     }
 
     async grantModeratorStatus() {

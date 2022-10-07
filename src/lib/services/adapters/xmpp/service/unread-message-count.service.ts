@@ -1,8 +1,8 @@
 import {BehaviorSubject, combineLatest, merge, Observable, Subject, Subscription} from 'rxjs';
 import {debounceTime, delay, distinctUntilChanged, map, share} from 'rxjs/operators';
 import {JidToNumber} from '../interface/chat.service';
-import {Direction, Message} from '../../../../core/message';
-import {Recipient} from '../../../../core/recipient';
+import {Direction, Message} from '../core/message';
+import {Recipient} from '../core/recipient';
 import {findSortedInsertionIndexLast} from '../../../../core/utils-array';
 import {ChatMessageListRegistryService} from '../../../components/chat-message-list-registry.service';
 import {XmppService} from '../../xmpp.service';
@@ -33,7 +33,7 @@ export class UnreadMessageCountService {
      */
     public readonly unreadMessageCountSum$: Observable<number>;
     /**
-     * emits as soon as the unread message count changes, you might want to debounce it with e.g. half a a second, as
+     * emits as soon as the unread message count changes, you might want to debounce it with e.g. half a second, as
      * new messages might be acknowledged in another session.
      */
     public readonly jidToUnreadCount$: BehaviorSubject<JidToNumber> = new BehaviorSubject(new Map<string, number>());

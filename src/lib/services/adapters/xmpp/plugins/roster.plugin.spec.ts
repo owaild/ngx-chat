@@ -1,9 +1,9 @@
 import {LogInRequest} from '../../../../core/log-in-request';
-import {jid} from '@xmpp/jid';
 import {firstValueFrom} from 'rxjs';
 import {XmppServiceModule} from '../../xmpp.service.module';
 import {XmppService} from '../../xmpp.service';
 import {EjabberdClient} from '../../../../test/ejabberd-client';
+import {parseJid} from '../core/jid';
 
 const domain = 'local-jabber.entenhausen.pazz.de';
 const service = 'wss://' + domain + ':5280/websocket';
@@ -22,8 +22,8 @@ const bobLogin: LogInRequest = {
     password: 'bob'
 };
 
-const timJID = jid(timLogin.username + '@' + timLogin.domain);
-const bobJID = jid(bobLogin.username + '@' + bobLogin.domain);
+const timJID = parseJid(timLogin.username + '@' + timLogin.domain);
+const bobJID = parseJid(bobLogin.username + '@' + bobLogin.domain);
 
 fdescribe('roster plugin', () => {
 
@@ -64,7 +64,7 @@ fdescribe('roster plugin', () => {
 
         expect(contacts.length).toEqual(1);
 
-        await chatService.removeContact(contacts[0].jid.toString())
+        await chatService.removeContact(contacts[0].jid.toString());
 
         expect(contacts.length).toEqual(0);
         await chatService.logOut();

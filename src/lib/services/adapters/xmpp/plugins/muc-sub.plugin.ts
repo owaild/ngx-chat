@@ -1,6 +1,6 @@
 import {XmppService} from '../../xmpp.service';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
-import {ChatPlugin} from '../../../../core/plugin';
+import {ChatPlugin} from '../core/plugin';
 import {first} from 'rxjs/operators';
 import {Finder} from '../shared/finder';
 

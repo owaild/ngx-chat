@@ -1,6 +1,6 @@
 import { Component, Inject, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Contact } from '../core/contact';
+import { Contact } from '../services/adapters/xmpp/core/contact';
 import { Translations } from '../core/translations';
 import { defaultTranslations } from '../core/translations-default';
 import { CHAT_SERVICE_TOKEN, ChatService } from '../services/adapters/xmpp/interface/chat.service';

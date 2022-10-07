@@ -16,11 +16,11 @@ import {
 } from '@angular/core';
 import {firstValueFrom, from, mergeMap, Observable, of, Subject} from 'rxjs';
 import {debounceTime, filter, takeUntil} from 'rxjs/operators';
-import {Direction, Message} from '../../core/message';
-import {Recipient} from '../../core/recipient';
+import {Direction, Message} from '../../services/adapters/xmpp/core/message';
+import {Recipient} from '../../services/adapters/xmpp/core/recipient';
 import {ChatMessageListRegistryService} from '../../services/components/chat-message-list-registry.service';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
-import {Contact, Invitation, isContact} from '../../core/contact';
+import {Contact, Invitation, isContact} from '../../services/adapters/xmpp/core/contact';
 import {ChatMessageInComponent} from '../chat-message-in/chat-message-in.component';
 
 @Component({

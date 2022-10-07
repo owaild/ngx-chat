@@ -1,7 +1,7 @@
 import {ChangeDetectionStrategy, Component, Inject, Input, OnDestroy, OnInit} from '@angular/core';
 import {merge, Observable, scan, Subject} from 'rxjs';
 import {filter, map, takeUntil} from 'rxjs/operators';
-import {Direction} from '../../core/message';
+import {Direction} from '../../services/adapters/xmpp/core/message';
 import {ChatListStateService, ChatWindowState} from '../../services/components/chat-list-state.service';
 import {CHAT_SERVICE_TOKEN, ChatService} from '../../services/adapters/xmpp/interface/chat.service';
 

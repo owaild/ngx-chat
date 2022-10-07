@@ -1,7 +1,7 @@
 import {XmppService} from '../../xmpp.service';
 import {ServiceDiscoveryPlugin} from './service-discovery.plugin';
-import {IqResponseStanza} from '../../../../core/stanza';
-import {ChatPlugin} from '../../../../core/plugin';
+import {IqResponseStanza} from '../core/stanza';
+import {ChatPlugin} from '../core/plugin';
 
 const nsPush = 'urn:xmpp:push:0';
 
